@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">PMIS APP</string>
+    <string name="welcome_message">Welcome to the PM Internship Scheme</string>
+    <string name="welcome_subheading">Empowering students with real-world opportunities</string>
+    <string name="get_started_button">Get Started</string>
+    <string name="main_screen_text">This is the main app screen</string>
+</resources>
