@@ -343,6 +343,7 @@ private fun ResumeStep(
     val context = LocalContext.current
     var isExtracting by remember { mutableStateOf(false) }
     var uploadStatus by remember { mutableStateOf("") }
+    var showWarning by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     
     BoxWithConstraints(
@@ -371,6 +372,7 @@ private fun ResumeStep(
                     state.resumePath = it.toString()
                     uploadStatus = "Resume uploaded successfully!"
                     isExtracting = true
+                    showWarning = false // Hide warning when resume is uploaded
                 }
             }
             
@@ -450,6 +452,50 @@ private fun ResumeStep(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+            
+            // Warning message for missing resume
+            if (showWarning) {
+                AnimatedVisibility(
+                    visible = showWarning,
+                    enter = fadeIn(animationSpec = tween(300)) + slideInHorizontally(
+                        initialOffsetX = { -it / 2 },
+                        animationSpec = tween(300)
+                    ),
+                    exit = fadeOut(animationSpec = tween(200))
+                ) {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = androidx.compose.material3.CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "⚠️",
+                                fontSize = 24.sp,
+                                modifier = Modifier.padding(end = 12.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Resume Required",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Text(
+                                    text = "Please upload your resume document to proceed to the next section.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
             
             // Extracted content section
             AnimatedVisibility(
@@ -567,7 +613,13 @@ private fun ResumeStep(
                 )
             ) {
                 Button(
-                    onClick = { onNavigateToStep(InternStep.Skills) },
+                    onClick = { 
+                        if (state.resumePath.isEmpty()) {
+                            showWarning = true
+                        } else {
+                            onNavigateToStep(InternStep.Skills)
+                        }
+                    },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
