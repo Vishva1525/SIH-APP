@@ -145,14 +145,16 @@ fun AuthScreen(navController: NavController) {
             val account = task.getResult(ApiException::class.java)
             
             if (account != null) {
+                // Simple Google Sign-In success (without Firebase)
                 Log.d("AuthScreen", "Google sign-in successful: ${account.email}")
-                Toast.makeText(context, "Welcome, ${account.displayName}!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Welcome, ${account.displayName ?: account.email}!", Toast.LENGTH_SHORT).show()
                 navController.navigate("main")
+                isGoogleSigningIn = false
             } else {
                 Log.e("AuthScreen", "Google sign-in failed: No account data")
                 Toast.makeText(context, "Sign-in failed: No account data", Toast.LENGTH_LONG).show()
+                isGoogleSigningIn = false
             }
-            isGoogleSigningIn = false
         } catch (e: ApiException) {
             Log.e("AuthScreen", "Google sign-in error: ${e.statusCode}", e)
             when (e.statusCode) {
@@ -259,7 +261,7 @@ fun AuthScreen(navController: NavController) {
             onClick = { 
                 isGoogleSigningIn = true
                 try {
-                    // Use DEFAULT_SIGN_IN without custom client ID for testing
+                    // Simple Google Sign-In without Firebase (for testing)
                     val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                         .requestEmail()
                         .build()
