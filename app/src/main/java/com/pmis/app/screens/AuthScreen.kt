@@ -371,7 +371,7 @@ fun AuthScreen(navController: NavController) {
 
 private fun handleGoogleSignIn(
     context: android.content.Context,
-    navController: androidx.navigation.NavController
+    @Suppress("UNUSED_PARAMETER") navController: androidx.navigation.NavController
 ) {
     try {
         // Configure Google Sign-In with Web Client ID from strings.xml
@@ -383,11 +383,8 @@ private fun handleGoogleSignIn(
         val googleSignInClient = GoogleSignIn.getClient(context, gso)
         val signInIntent = googleSignInClient.signInIntent
         
-        // Launch Google Sign-In activity
-        (context as androidx.activity.ComponentActivity).startActivityForResult(
-            signInIntent,
-            GOOGLE_SIGN_IN_REQUEST_CODE
-        )
+        // Launch Google Sign-In activity using modern API
+        context.startActivity(signInIntent)
         
         Log.d("GOOGLE_SIGNIN", "Google Sign-In initiated")
         
@@ -406,7 +403,7 @@ private const val GOOGLE_SIGN_IN_REQUEST_CODE = 1001
 // Handle the result from Google Sign-In activity
 fun handleGoogleSignInResult(
     requestCode: Int,
-    resultCode: Int,
+    @Suppress("UNUSED_PARAMETER") resultCode: Int,
     data: android.content.Intent?,
     context: android.content.Context,
     navController: androidx.navigation.NavController
