@@ -96,27 +96,6 @@ private fun isInputValid(input: String): Boolean {
     }
 }
 
-private fun handleGoogleSignIn(
-    context: android.content.Context, 
-    navController: androidx.navigation.NavController,
-    onSignInResult: (Boolean, String?) -> Unit
-) {
-    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-        .requestIdToken("123456789-abcdef1234567890.apps.googleusercontent.com") // Replace with actual client ID
-        .requestEmail()
-        .build()
-
-    val googleSignInClient = GoogleSignIn.getClient(context, gso)
-    
-    // For now, show a toast and navigate (placeholder implementation)
-    // In a real app, you would use the launcher with the actual Google Sign-In result
-    Toast.makeText(context, "Google Sign-in initiated", Toast.LENGTH_SHORT).show()
-    Log.d("AuthScreen", "Google Sign-in initiated")
-    
-    // Simulate successful sign-in for now
-    onSignInResult(true, "Google Sign-in successful")
-    navController.navigate("main")
-}
 
 @Composable
 fun AuthScreen(navController: NavController) {
@@ -129,47 +108,10 @@ fun AuthScreen(navController: NavController) {
     var showError by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     var isFocused by remember { mutableStateOf(false) }
-    var isGoogleSigningIn by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
-    val auth = Firebase.auth
-
-    // Google Sign-In launcher
-    val googleSignInLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        try {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            val account = task.getResult(ApiException::class.java)
-            
-            if (account != null) {
-                // Simple Google Sign-In success (without Firebase)
-                Log.d("AuthScreen", "Google sign-in successful: ${account.email}")
-                Toast.makeText(context, "Welcome, ${account.displayName ?: account.email}!", Toast.LENGTH_SHORT).show()
-                navController.navigate("main")
-                isGoogleSigningIn = false
-            } else {
-                Log.e("AuthScreen", "Google sign-in failed: No account data")
-                Toast.makeText(context, "Sign-in failed: No account data", Toast.LENGTH_LONG).show()
-                isGoogleSigningIn = false
-            }
-        } catch (e: ApiException) {
-            Log.e("AuthScreen", "Google sign-in error: ${e.statusCode}", e)
-            when (e.statusCode) {
-                10 -> Toast.makeText(context, "Sign-in error: Developer error - Check Google Console configuration", Toast.LENGTH_LONG).show()
-                12501 -> Toast.makeText(context, "Sign-in cancelled by user", Toast.LENGTH_SHORT).show()
-                7 -> Toast.makeText(context, "Network error - Check your internet connection", Toast.LENGTH_LONG).show()
-                else -> Toast.makeText(context, "Sign-in error: ${e.message}", Toast.LENGTH_LONG).show()
-            }
-            isGoogleSigningIn = false
-        } catch (e: Exception) {
-            Log.e("AuthScreen", "Unexpected Google sign-in error", e)
-            Toast.makeText(context, "Unexpected error: ${e.message}", Toast.LENGTH_LONG).show()
-            isGoogleSigningIn = false
-        }
-    }
     
     Column(
         modifier = Modifier
