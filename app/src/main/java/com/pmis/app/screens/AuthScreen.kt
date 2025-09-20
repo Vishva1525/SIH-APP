@@ -206,108 +206,81 @@ fun AuthScreen(navController: NavController) {
         
         Spacer(modifier = Modifier.height(48.dp))
         
-        // Continue with Email button
-        Button(
-            onClick = { 
-                showUnifiedInput = !showUnifiedInput
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = EmailBlue
-            )
-        ) {
-            Text(
-                text = "Continue with Email",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = Color.White
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Continue with Phone Number button
-        Button(
-            onClick = { 
-                showUnifiedInput = !showUnifiedInput
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = PhoneGreen
-            )
-        ) {
-            Text(
-                text = "Continue with Phone Number",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = Color.White
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Continue with Google button
-        Button(
-            onClick = { 
-                isGoogleSigningIn = true
-                try {
-                    // Simple Google Sign-In without Firebase (for testing)
-                    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                        .requestEmail()
-                        .build()
-
-                    val googleSignInClient = GoogleSignIn.getClient(context, gso)
-                    val signInIntent = googleSignInClient.signInIntent
-                    googleSignInLauncher.launch(signInIntent)
-                } catch (e: Exception) {
-                    Log.e("AuthScreen", "Google Sign-In setup error", e)
-                    Toast.makeText(context, "Google Sign-In setup failed: ${e.message}", Toast.LENGTH_LONG).show()
-                    isGoogleSigningIn = false
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = GoogleWhite
-            ),
-            enabled = !isGoogleSigningIn
-        ) {
-            if (isGoogleSigningIn) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp,
-                    color = GoogleBlack
+            // Continue with Email button
+            Button(
+                onClick = {
+                    showUnifiedInput = !showUnifiedInput
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = EmailBlue
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+            ) {
                 Text(
-                    text = "Signing in...",
+                    text = "📧 Continue with Email",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.SemiBold
                     ),
-                    color = GoogleBlack
-                )
-            } else {
-                Text(
-                    text = "🔍 Continue with Google",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = GoogleBlack
+                    color = Color.White
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Continue with Phone Number button
+            Button(
+                onClick = {
+                    showUnifiedInput = !showUnifiedInput
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PhoneGreen
+                )
+            ) {
+                Text(
+                    text = "📱 Continue with Phone Number",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = Color.White
+                )
+            }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Continue with Google button (Temporarily disabled due to configuration issues)
+        Button(
+            onClick = { 
+                // Temporarily navigate directly to main screen
+                Toast.makeText(context, "Google Sign-In temporarily disabled. Using email/phone instead.", Toast.LENGTH_SHORT).show()
+                // Uncomment below when Google Console is properly configured
+                // navController.navigate("main")
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = GoogleWhite.copy(alpha = 0.6f) // Dimmed to show disabled state
+            ),
+            enabled = false // Temporarily disabled
+        ) {
+            Text(
+                text = "🔍 Google Sign-In (Coming Soon)",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = GoogleBlack.copy(alpha = 0.6f)
+            )
         }
         
         Spacer(modifier = Modifier.height(24.dp))
