@@ -161,7 +161,12 @@ fun InternRegistrationScreen() {
 
         when (InternStep.values()[currentStep]) {
             InternStep.BasicInfo -> BasicInfoStep(formState)
-            InternStep.Resume -> ResumeStep(formState)
+            InternStep.Resume -> ResumeStep(
+                state = formState,
+                onNavigateToStep = { step ->
+                    currentStep = step.ordinal
+                }
+            )
             InternStep.Skills -> SkillsStep(formState)
             InternStep.Preferences -> PreferencesStep(formState)
             InternStep.Fairness -> FairnessStep(formState)
@@ -319,7 +324,10 @@ private fun BasicInfoStep(state: InternFormState) {
 }
 
 @Composable
-private fun ResumeStep(state: InternFormState) {
+private fun ResumeStep(
+    state: InternFormState,
+    onNavigateToStep: (InternStep) -> Unit = {}
+) {
     val context = LocalContext.current
     var isExtracting by remember { mutableStateOf(false) }
     var uploadStatus by remember { mutableStateOf("") }
@@ -461,6 +469,53 @@ private fun ResumeStep(state: InternFormState) {
                 imeAction = ImeAction.Done
             )
         )
+    }
+    
+    // Navigation buttons
+    Spacer(modifier = Modifier.height(32.dp))
+    
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Back button
+        OutlinedButton(
+            onClick = { onNavigateToStep(InternStep.BasicInfo) },
+            modifier = Modifier.weight(1f),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.primary
+            )
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowLeft, 
+                contentDescription = "Back",
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Back")
+        }
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        // Next button
+        Button(
+            onClick = { onNavigateToStep(InternStep.Skills) },
+            modifier = Modifier.weight(1f),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+        ) {
+            Text("Next")
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight, 
+                contentDescription = "Next",
+                modifier = Modifier.size(18.dp)
+            )
+        }
     }
 }
 
