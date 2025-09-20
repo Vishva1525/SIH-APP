@@ -56,9 +56,9 @@ class DocumentExtractor(private val context: Context) {
         val experience = extractExperienceDetails(lines)
         
         return ExtractedResumeData(
-            education = education.ifEmpty { "No education information found. Please add manually." },
-            skills = skills.ifEmpty { "No skills information found. Please add manually." },
-            experience = experience.ifEmpty { "No experience information found. Please add manually." }
+            education = cleanContent(education).ifEmpty { "No education information found. Please add manually." },
+            skills = cleanContent(skills).ifEmpty { "No skills information found. Please add manually." },
+            experience = cleanContent(experience).ifEmpty { "No experience information found. Please add manually." }
         )
     }
     
@@ -68,7 +68,10 @@ class DocumentExtractor(private val context: Context) {
         var sectionDepth = 0
         
         for (line in lines) {
-            val lowerLine = line.lowercase()
+            val cleanLineText = cleanLine(line)
+            if (cleanLineText.isEmpty()) continue
+            
+            val lowerLine = cleanLineText.lowercase()
             
             // Check if this line starts a new section
             val startsNewSection = keywords.any { keyword ->
@@ -78,37 +81,52 @@ class DocumentExtractor(private val context: Context) {
             if (startsNewSection) {
                 inSection = true
                 sectionDepth = 0
-                result.append("$line\n")
+                // Don't include the section header itself
                 continue
             }
             
             // If we're in a section, collect content
             if (inSection) {
                 // Check if this might be the start of a different section
-                val isOtherSection = line.isNotEmpty() && 
-                    !line.startsWith(" ") && 
-                    !line.startsWith("-") && 
-                    !line.startsWith("•") &&
-                    !line.matches(Regex(".*\\d{4}.*")) && // Not a date
-                    !line.matches(Regex(".*@.*")) && // Not an email
-                    !line.matches(Regex(".*\\d{10}.*")) // Not a phone number
+                val isOtherSection = cleanLineText.isNotEmpty() && 
+                    !cleanLineText.startsWith(" ") && 
+                    !cleanLineText.startsWith("-") && 
+                    !cleanLineText.startsWith("•") &&
+                    !cleanLineText.matches(Regex(".*\\d{4}.*")) && // Not a date
+                    !cleanLineText.matches(Regex(".*@.*")) && // Not an email
+                    !cleanLineText.matches(Regex(".*\\d{10}.*")) && // Not a phone number
+                    isNewMajorSection(cleanLineText) // Check for new major sections
                 
                 if (isOtherSection && sectionDepth > 2) {
                     // Probably a new section, stop here
                     break
                 }
                 
-                result.append("$line\n")
-                sectionDepth++
+                // Only add meaningful content
+                if (isMeaningfulContent(cleanLineText)) {
+                    result.append("$cleanLineText\n")
+                    sectionDepth++
+                }
                 
                 // Stop after collecting reasonable amount of content
-                if (sectionDepth > 10) {
+                if (sectionDepth > 15) {
                     break
                 }
             }
         }
         
         return result.toString().trim()
+    }
+    
+    private fun isMeaningfulContent(line: String): Boolean {
+        val trimmed = line.trim()
+        return trimmed.length > 3 && // At least 4 characters
+               !trimmed.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) && // Not just punctuation/numbers
+               !trimmed.matches(Regex("^\\s*[a-z]\\s*$")) && // Not single letters
+               !trimmed.lowercase().matches(Regex("^(page|section|chapter|footer|header)\\s*\\d*$")) && // Not page markers
+               !trimmed.matches(Regex("^\\s*[\\-_=]{3,}\\s*$")) && // Not separator lines
+               !trimmed.matches(Regex("^\\s*\\d+\\s*$")) && // Not just numbers
+               trimmed.contains(Regex("[a-zA-Z]")) // Must contain at least one letter
     }
     
     private fun extractEducationDetails(lines: List<String>): String {
@@ -122,7 +140,10 @@ class DocumentExtractor(private val context: Context) {
         
         for (i in lines.indices) {
             val line = lines[i]
-            val lowerLine = line.lowercase()
+            val cleanLineText = cleanLine(line)
+            if (cleanLineText.isEmpty()) continue
+            
+            val lowerLine = cleanLineText.lowercase()
             
             // Check if we're entering education section
             if (educationKeywords.any { keyword -> lowerLine.contains(keyword) && lowerLine.length < 50 }) {
@@ -131,19 +152,22 @@ class DocumentExtractor(private val context: Context) {
             }
             
             // Check if we're leaving education section (new major section)
-            if (inEducationSection && isNewMajorSection(line)) {
+            if (inEducationSection && isNewMajorSection(cleanLineText)) {
                 break
             }
             
             if (inEducationSection) {
+                // Only process meaningful content
+                if (!isMeaningfulContent(cleanLineText)) continue
+                
                 // Try to extract education information from this line
-                val extractedEntry = parseEducationLine(line)
+                val extractedEntry = parseEducationLine(cleanLineText)
                 if (extractedEntry != null) {
                     educationEntries.add(extractedEntry)
                 } else {
                     // Check if this line contains degree or institution info
-                    val degree = extractDegreeFromLine(line, degreeKeywords)
-                    val institution = extractInstitutionFromLine(line, institutionKeywords)
+                    val degree = extractDegreeFromLine(cleanLineText, degreeKeywords)
+                    val institution = extractInstitutionFromLine(cleanLineText, institutionKeywords)
                     
                     if (degree.isNotEmpty() || institution.isNotEmpty()) {
                         if (currentEntry == null) {
@@ -153,8 +177,8 @@ class DocumentExtractor(private val context: Context) {
                         if (institution.isNotEmpty()) currentEntry.institution = institution
                         
                         // Try to extract year from this line or next lines
-                        val year = extractYearFromLine(line) ?: 
-                                  if (i < lines.size - 1) extractYearFromLine(lines[i + 1]) else null
+                        val year = extractYearFromLine(cleanLineText) ?: 
+                                  if (i < lines.size - 1) extractYearFromLine(cleanLine(lines[i + 1])) else null
                         if (year != null) currentEntry.year = year
                         
                         if (currentEntry.isComplete()) {
@@ -203,13 +227,13 @@ class DocumentExtractor(private val context: Context) {
                 val groups = match.groupValues
                 return when (groups.size) {
                     5 -> EducationEntry(
-                        degree = groups[1].trim(),
-                        institution = groups[3].trim(),
+                        degree = cleanLine(groups[1].trim()),
+                        institution = cleanLine(groups[3].trim()),
                         year = groups[4].ifEmpty { "" }
                     )
                     4 -> EducationEntry(
-                        degree = groups[1].trim(),
-                        institution = groups[2].trim(),
+                        degree = cleanLine(groups[1].trim()),
+                        institution = cleanLine(groups[2].trim()),
                         year = groups[3].ifEmpty { "" }
                     )
                     else -> null
@@ -228,7 +252,7 @@ class DocumentExtractor(private val context: Context) {
                 val parts = line.split(",", "-", "•", "–")
                 for (part in parts) {
                     if (part.lowercase().contains(keyword)) {
-                        return part.trim()
+                        return cleanLine(part.trim())
                     }
                 }
             }
@@ -248,7 +272,7 @@ class DocumentExtractor(private val context: Context) {
                 val partLower = part.lowercase()
                 if (institutionKeywords.any { partLower.contains(it) } ||
                     partLower.matches(Regex(".*[a-z]+\\s+(university|college|institute|school).*"))) {
-                    return part.trim()
+                    return cleanLine(part.trim())
                 }
             }
         }
@@ -300,5 +324,51 @@ class DocumentExtractor(private val context: Context) {
         fun isComplete(): Boolean = degree.isNotEmpty() && institution.isNotEmpty()
         fun hasContent(): Boolean = degree.isNotEmpty() || institution.isNotEmpty()
         fun getYearInt(): Int = year.toIntOrNull() ?: 0
+    }
+    
+    private fun cleanContent(content: String): String {
+        if (content.isEmpty()) return content
+        
+        val originalLength = content.length
+        val cleaned = content
+            // Remove escape characters and control characters
+            .replace(Regex("[\\x00-\\x1F\\x7F]"), "")
+            .replace("\\e", "")
+            .replace("\\n", "\n")
+            .replace("\\t", "\t")
+            .replace("\\r", "")
+            
+            // Remove common OCR artifacts and meaningless patterns
+            .replace(Regex("\\blang\\b"), "") // Remove "lang" words
+            .replace(Regex("\\b\\d{1,2}\\b(?![0-9]{2,})"), "") // Remove single/double digits that aren't years
+            .replace(Regex("^\\s*[\\d\\s]+$"), "") // Remove lines that are only numbers and spaces
+            
+            // Remove common meaningless symbols and patterns
+            .replace(Regex("[\\[\\]{}|~`]"), "")
+            .replace(Regex("\\s+"), " ") // Replace multiple spaces with single space
+            
+            // Remove lines that are too short or meaningless
+            .split("\n")
+            .filter { line ->
+                val trimmed = line.trim()
+                trimmed.length > 2 && // At least 3 characters
+                !trimmed.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) && // Not just punctuation/numbers
+                !trimmed.matches(Regex("^\\s*[a-z]\\s*$")) && // Not single letters
+                !trimmed.lowercase().matches(Regex("^(page|section|chapter)\\s*\\d*$")) && // Not page/section markers
+                !trimmed.matches(Regex("^\\s*[\\-_=]{3,}\\s*$")) // Not separator lines
+            }
+            .joinToString("\n")
+            .trim()
+        
+        Log.d("DocumentExtractor", "Content cleaned: $originalLength -> ${cleaned.length} characters")
+        return cleaned
+    }
+    
+    private fun cleanLine(line: String): String {
+        return line
+            .replace(Regex("[\\x00-\\x1F\\x7F]"), "") // Remove control characters
+            .replace(Regex("\\s+"), " ") // Normalize whitespace
+            .replace(Regex("^\\s*[\\d\\s\\-\\.,;:!?()]+$"), "") // Remove lines with only punctuation
+            .trim()
     }
 }
