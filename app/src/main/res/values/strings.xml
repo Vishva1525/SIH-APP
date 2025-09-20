@@ -1,7 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PMIS APP</string>
+    <string name="app_name">PMIS App</string>
+    
+    <!-- Google Sign-In Configuration -->
+    <!-- 
+    IMPORTANT: Replace REPLACE_WITH_WEB_CLIENT_ID with your actual Web Client ID from Google Console
+    
+    Steps to get Web Client ID:
+    1. Go to Google Cloud Console (https://console.cloud.google.com/)
+    2. Select your project
+    3. Go to APIs & Services → Credentials
+    4. Find "OAuth 2.0 Client IDs"
+    5. Look for "Web application" type client
+    6. Copy the Client ID (not the Android client ID)
+    7. Replace REPLACE_WITH_WEB_CLIENT_ID below with this value
+    
+    Example: 123456789-abcdef1234567890abcdef1234567890.apps.googleusercontent.com
+    -->
+    <string name="default_web_client_id">REPLACE_WITH_WEB_CLIENT_ID.apps.googleusercontent.com</string>
+    
+    <!-- Welcome Screen Strings -->
     <string name="welcome_message">Welcome to the PM Internship Scheme</string>
     <string name="welcome_subheading">Empowering students with real-world opportunities</string>
     <string name="get_started_button">Get Started</string>
-    <string name="main_screen_text">This is the main app screen</string>
 </resources>

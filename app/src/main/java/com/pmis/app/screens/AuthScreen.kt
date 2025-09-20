@@ -56,6 +56,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.pmis.app.ui.theme.PMISAppTheme
 import kotlinx.coroutines.launch
+import com.pmis.app.R
 
 // Custom colors for auth buttons
 private val EmailBlue = Color(0xFF4285F4)
@@ -198,13 +199,10 @@ fun AuthScreen(navController: NavController) {
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Continue with Google button (Temporarily disabled due to configuration issues)
+        // Continue with Google button
         Button(
             onClick = { 
-                // Temporarily navigate directly to main screen
-                Toast.makeText(context, "Google Sign-In temporarily disabled. Using email/phone instead.", Toast.LENGTH_SHORT).show()
-                // Uncomment below when Google Console is properly configured
-                // navController.navigate("main")
+                handleGoogleSignIn(context, navController)
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -212,16 +210,15 @@ fun AuthScreen(navController: NavController) {
                 .padding(horizontal = 16.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = GoogleWhite.copy(alpha = 0.6f) // Dimmed to show disabled state
-            ),
-            enabled = false // Temporarily disabled
+                containerColor = GoogleWhite
+            )
         ) {
             Text(
-                text = "🔍 Google Sign-In (Coming Soon)",
+                text = "🔍 Continue with Google",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.SemiBold
                 ),
-                color = GoogleBlack.copy(alpha = 0.6f)
+                color = GoogleBlack
             )
         }
         
@@ -363,6 +360,101 @@ fun AuthScreen(navController: NavController) {
         
         // Snackbar host for showing messages
         SnackbarHost(hostState = snackbarHostState)
+    }
+}
+
+// Common causes of DEVELOPER_ERROR:
+// 1. Wrong client ID (must use Web Client ID in requestIdToken).
+// 2. SHA-1 fingerprint not added in console.
+// 3. Package name mismatch.
+// 4. Outdated google-services.json.
+
+private fun handleGoogleSignIn(
+    context: android.content.Context,
+    navController: androidx.navigation.NavController
+) {
+    try {
+        // Configure Google Sign-In with Web Client ID from strings.xml
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(context.getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+
+        val googleSignInClient = GoogleSignIn.getClient(context, gso)
+        val signInIntent = googleSignInClient.signInIntent
+        
+        // Launch Google Sign-In activity
+        (context as androidx.activity.ComponentActivity).startActivityForResult(
+            signInIntent,
+            GOOGLE_SIGN_IN_REQUEST_CODE
+        )
+        
+        Log.d("GOOGLE_SIGNIN", "Google Sign-In initiated")
+        
+    } catch (e: Exception) {
+        Log.e("GOOGLE_SIGNIN", "Failed to initiate Google Sign-In", e)
+        Toast.makeText(
+            context, 
+            "Google Sign-In setup failed: ${e.message}", 
+            Toast.LENGTH_LONG
+        ).show()
+    }
+}
+
+private const val GOOGLE_SIGN_IN_REQUEST_CODE = 1001
+
+// Handle the result from Google Sign-In activity
+fun handleGoogleSignInResult(
+    requestCode: Int,
+    resultCode: Int,
+    data: android.content.Intent?,
+    context: android.content.Context,
+    navController: androidx.navigation.NavController
+) {
+    if (requestCode == GOOGLE_SIGN_IN_REQUEST_CODE) {
+        try {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+            val account = task.getResult(ApiException::class.java)
+            
+            if (account != null) {
+                Log.d("GOOGLE_SIGNIN", "Sign-in successful: ${account.email}")
+                Toast.makeText(
+                    context, 
+                    "Welcome, ${account.displayName ?: account.email}!", 
+                    Toast.LENGTH_SHORT
+                ).show()
+                navController.navigate("main")
+            } else {
+                Log.e("GOOGLE_SIGNIN", "Sign-in failed: No account data")
+                Toast.makeText(
+                    context, 
+                    "Sign-in failed: No account data", 
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            
+        } catch (e: ApiException) {
+            // Detailed logging for debugging DEVELOPER_ERROR
+            Log.e("GOOGLE_SIGNIN", "SignIn failed: statusCode=${e.statusCode}, message=${e.message}", e)
+            
+            val errorMessage = when (e.statusCode) {
+                10 -> "Developer error - Check Google Console configuration (statusCode: ${e.statusCode})"
+                12501 -> "Sign-in cancelled by user (statusCode: ${e.statusCode})"
+                7 -> "Network error - Check internet connection (statusCode: ${e.statusCode})"
+                8 -> "Internal error - Try again (statusCode: ${e.statusCode})"
+                else -> "Sign-in error: ${e.message} (statusCode: ${e.statusCode})"
+            }
+            
+            Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+            
+        } catch (e: Exception) {
+            Log.e("GOOGLE_SIGNIN", "Unexpected Google Sign-In error", e)
+            Toast.makeText(
+                context, 
+                "Unexpected error: ${e.message}", 
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 }
 
