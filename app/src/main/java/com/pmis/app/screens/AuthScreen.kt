@@ -2,14 +2,24 @@ package com.pmis.app.screens
 
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.platform.LocalContext
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -25,6 +35,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -85,13 +96,25 @@ private fun isInputValid(input: String): Boolean {
     }
 }
 
-// TODO: Replace with Firebase Auth integration later
-private fun handleGoogleSignIn(context: android.content.Context, navController: androidx.navigation.NavController) {
-    Toast.makeText(context, "Google Sign-in Clicked", Toast.LENGTH_SHORT).show()
-    Log.d("AuthScreen", "Google Sign-in button clicked")
+private fun handleGoogleSignIn(
+    context: android.content.Context, 
+    navController: androidx.navigation.NavController,
+    onSignInResult: (Boolean, String?) -> Unit
+) {
+    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+        .requestIdToken("123456789-abcdef1234567890.apps.googleusercontent.com") // Replace with actual client ID
+        .requestEmail()
+        .build()
+
+    val googleSignInClient = GoogleSignIn.getClient(context, gso)
     
-    // Navigate to main screen after Google sign-in
-    // TODO: Replace with actual Google Auth logic
+    // For now, show a toast and navigate (placeholder implementation)
+    // In a real app, you would use the launcher with the actual Google Sign-In result
+    Toast.makeText(context, "Google Sign-in initiated", Toast.LENGTH_SHORT).show()
+    Log.d("AuthScreen", "Google Sign-in initiated")
+    
+    // Simulate successful sign-in for now
+    onSignInResult(true, "Google Sign-in successful")
     navController.navigate("main")
 }
 
@@ -99,17 +122,48 @@ private fun handleGoogleSignIn(context: android.content.Context, navController: 
 fun AuthScreen(navController: NavController) {
     // Debug log to verify AuthScreen is loaded
     Log.d("AuthScreen", "AuthScreen composable loaded - NEW VERSION")
-    
+
     // State management
     var showUnifiedInput by remember { mutableStateOf(false) }
     var unifiedInputText by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     var isFocused by remember { mutableStateOf(false) }
-    
+    var isGoogleSigningIn by remember { mutableStateOf(false) }
+
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val auth = Firebase.auth
+
+    // Google Sign-In launcher
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        try {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            val account = task.getResult(ApiException::class.java)
+            
+            val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+            auth.signInWithCredential(credential)
+                .addOnCompleteListener { authTask ->
+                    if (authTask.isSuccessful) {
+                        val user = auth.currentUser
+                        Log.d("AuthScreen", "Google sign-in successful: ${user?.email}")
+                        Toast.makeText(context, "Welcome, ${user?.displayName}!", Toast.LENGTH_SHORT).show()
+                        navController.navigate("main")
+                    } else {
+                        Log.e("AuthScreen", "Google sign-in failed", authTask.exception)
+                        Toast.makeText(context, "Sign-in failed: ${authTask.exception?.message}", Toast.LENGTH_LONG).show()
+                    }
+                    isGoogleSigningIn = false
+                }
+        } catch (e: ApiException) {
+            Log.e("AuthScreen", "Google sign-in error", e)
+            Toast.makeText(context, "Sign-in error: ${e.message}", Toast.LENGTH_LONG).show()
+            isGoogleSigningIn = false
+        }
+    }
     
     Column(
         modifier = Modifier
@@ -198,7 +252,17 @@ fun AuthScreen(navController: NavController) {
         
         // Continue with Google button
         Button(
-            onClick = { handleGoogleSignIn(context, navController) },
+            onClick = { 
+                isGoogleSigningIn = true
+                val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestIdToken("123456789-abcdef1234567890.apps.googleusercontent.com") // Replace with actual client ID
+                    .requestEmail()
+                    .build()
+
+                val googleSignInClient = GoogleSignIn.getClient(context, gso)
+                val signInIntent = googleSignInClient.signInIntent
+                googleSignInLauncher.launch(signInIntent)
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
@@ -206,15 +270,32 @@ fun AuthScreen(navController: NavController) {
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = GoogleWhite
-            )
+            ),
+            enabled = !isGoogleSigningIn
         ) {
-            Text(
-                text = "🔍 Continue with Google",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = GoogleBlack
-            )
+            if (isGoogleSigningIn) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = GoogleBlack
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Signing in...",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = GoogleBlack
+                )
+            } else {
+                Text(
+                    text = "🔍 Continue with Google",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = GoogleBlack
+                )
+            }
         }
         
         Spacer(modifier = Modifier.height(24.dp))
