@@ -2,22 +2,22 @@
 <resources>
     <string name="app_name">PMIS App</string>
     
-    <!-- Google Sign-In Configuration -->
+    <!-- Supabase Configuration -->
     <!-- 
-    IMPORTANT: Replace REPLACE_WITH_WEB_CLIENT_ID with your actual Web Client ID from Google Console
+    IMPORTANT: Replace with your actual Supabase project URL and anon key
     
-    Steps to get Web Client ID:
-    1. Go to Google Cloud Console (https://console.cloud.google.com/)
+    Steps to get Supabase credentials:
+    1. Go to Supabase Dashboard (https://supabase.com/dashboard)
     2. Select your project
-    3. Go to APIs & Services → Credentials
-    4. Find "OAuth 2.0 Client IDs"
-    5. Look for "Web application" type client
-    6. Copy the Client ID (not the Android client ID)
-    7. Replace REPLACE_WITH_WEB_CLIENT_ID below with this value
-    
-    Example: 123456789-abcdef1234567890abcdef1234567890.apps.googleusercontent.com
+    3. Go to Settings → API
+    4. Copy Project URL and anon public key
+    5. Replace the values below
     -->
-    <string name="default_web_client_id">777495340370-kghb0uoo328bjfmk2un9letqp2lbqo2b.apps.googleusercontent.com</string>
+    <string name="supabase_url">https://ctwgidetrhlbbaiqapwe.supabase.co</string>
+    <string name="supabase_anon_key">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0d2dpZGV0cmhsYmJhaXFhcHdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzNTI0MTcsImV4cCI6MjA3MzkyODQxN30.-BrbFWph4V4iXJMfkM-Acg-r86I9sVJWwEFvISJDkcI</string>
+    
+    <!-- Google OAuth Client ID for Supabase -->
+    <string name="google_oauth_client_id">777495340370-3b8vtc0le1mkn3rrof9elu8us6jh9gm3.apps.googleusercontent.com</string>
     
     <!-- Welcome Screen Strings -->
     <string name="welcome_message">Welcome to the PM Internship Scheme</string>

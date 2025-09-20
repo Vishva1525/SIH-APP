@@ -48,19 +48,19 @@ class DocumentExtractor(private val context: Context) {
         }
     }
     
-    private fun parseResumeContent(content: String): ExtractedResumeData {
-        val lines = content.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
-        
-        val education = extractEducationDetails(lines)
-        val skills = extractSkillsDetails(lines)
-        val experience = extractExperienceDetails(lines)
-        
-        return ExtractedResumeData(
-            education = cleanContent(education).ifEmpty { "No education information found. Please add manually." },
-            skills = cleanContent(skills).ifEmpty { "No skills information found. Please add manually." },
-            experience = cleanContent(experience).ifEmpty { "No experience information found. Please add manually." }
-        )
-    }
+        private fun parseResumeContent(content: String): ExtractedResumeData {
+            val lines = content.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
+            
+            val education = extractEducationDetails(lines)
+            val skills = extractSkillsDetails(lines)
+            val experience = extractExperienceDetails(lines)
+            
+            return ExtractedResumeData(
+                education = cleanAndFormatContent(education).ifEmpty { "No education information found. Please add manually." },
+                skills = cleanAndFormatContent(skills).ifEmpty { "No skills information found. Please add manually." },
+                experience = cleanAndFormatContent(experience).ifEmpty { "No experience information found. Please add manually." }
+            )
+        }
     
     private fun extractSection(lines: List<String>, keywords: List<String>): String {
         val result = StringBuilder()
@@ -118,19 +118,22 @@ class DocumentExtractor(private val context: Context) {
         return result.toString().trim()
     }
     
-    private fun isMeaningfulContent(line: String): Boolean {
-        val trimmed = line.trim()
-        return trimmed.length > 3 && // At least 4 characters
-               !trimmed.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) && // Not just punctuation/numbers
-               !trimmed.matches(Regex("^\\s*[a-z]\\s*$")) && // Not single letters
-               !trimmed.matches(Regex("^\\s*[A-Z]{1,2}\\s*$")) && // Not single/double uppercase letters like "E", "A"
-               !trimmed.matches(Regex("^\\s*[/\\\\][A-Za-z]\\s*$")) && // Not /E, /A, \B patterns
-               !trimmed.lowercase().matches(Regex("^(page|section|chapter|footer|header)\\s*\\d*$")) && // Not page markers
-               !trimmed.matches(Regex("^\\s*[\\-_=]{3,}\\s*$")) && // Not separator lines
-               !trimmed.matches(Regex("^\\s*\\d+\\s*$")) && // Not just numbers
-               !trimmed.matches(Regex("^\\s*[\\^\\`\\~]\\s*$")) && // Not single special chars
-               trimmed.contains(Regex("[a-zA-Z]")) // Must contain at least one letter
-    }
+        private fun isMeaningfulContent(line: String): Boolean {
+            val trimmed = line.trim()
+            return trimmed.length > 4 && // At least 5 characters
+                   !trimmed.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) && // Not just punctuation/numbers
+                   !trimmed.matches(Regex("^\\s*[a-z]\\s*$")) && // Not single letters
+                   !trimmed.matches(Regex("^\\s*[A-Z]{1,2}\\s*$")) && // Not single/double uppercase letters like "E", "A"
+                   !trimmed.matches(Regex("^\\s*[/\\\\][A-Za-z]\\s*$")) && // Not /E, /A, \B patterns
+                   !trimmed.lowercase().matches(Regex("^(page|section|chapter|footer|header)\\s*\\d*$")) && // Not page markers
+                   !trimmed.matches(Regex("^\\s*[\\-_=]{3,}\\s*$")) && // Not separator lines
+                   !trimmed.matches(Regex("^\\s*\\d+\\s*$")) && // Not just numbers
+                   !trimmed.matches(Regex("^\\s*[\\^\\`\\~]\\s*$")) && // Not single special chars
+                   !trimmed.matches(Regex("^[?\\s]+$")) && // Not just question marks and spaces
+                   !trimmed.matches(Regex("^[^a-zA-Z]*$")) && // Must contain at least one letter
+                   trimmed.contains(Regex("[a-zA-Z]{3,}")) && // Must contain meaningful words (3+ letters)
+                   !trimmed.contains(Regex("[?]{3,}")) // Not lines with many question marks
+        }
     
     private fun extractEducationDetails(lines: List<String>): String {
         val educationKeywords = listOf("education", "academic", "qualification", "degree", "university", "college", "school")
@@ -329,53 +332,90 @@ class DocumentExtractor(private val context: Context) {
         fun getYearInt(): Int = year.toIntOrNull() ?: 0
     }
     
-    private fun cleanContent(content: String): String {
-        if (content.isEmpty()) return content
+        private fun cleanAndFormatContent(content: String): String {
+            if (content.isEmpty()) return content
+            
+            val cleaned = cleanContent(content)
+            
+            // Additional formatting for better readability
+            return cleaned
+                .split("\n")
+                .map { line -> 
+                    line.trim()
+                        .replace(Regex("\\s+"), " ") // Normalize spaces
+                        .replace(Regex("^[\\-\\*\\+]\\s*"), "") // Remove bullet points
+                        .replace(Regex("^\\d+\\.\\s*"), "") // Remove numbered lists
+                        .trim()
+                }
+                .filter { line -> 
+                    line.length > 3 && 
+                    !line.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) &&
+                    line.contains(Regex("[a-zA-Z]{3,}"))
+                }
+                .distinct() // Remove duplicate lines
+                .joinToString("\n")
+                .trim()
+        }
         
-        val originalLength = content.length
-        val cleaned = content
-            // Remove escape characters and control characters
-            .replace(Regex("[\\x00-\\x1F\\x7F]"), "")
-            .replace("\\e", "")
-            .replace("/E", "") // Remove /E artifacts
-            .replace("\\n", "\n")
-            .replace("\\t", "\t")
-            .replace("\\r", "")
+        private fun cleanContent(content: String): String {
+            if (content.isEmpty()) return content
             
-            // Remove common OCR artifacts and meaningless patterns
-            .replace(Regex("\\blang\\b"), "") // Remove "lang" words
-            .replace(Regex("\\b\\d{1,2}\\b(?![0-9]{2,})"), "") // Remove single/double digits that aren't years
-            .replace(Regex("^\\s*[\\d\\s]+$"), "") // Remove lines that are only numbers and spaces
-            .replace(Regex("[/\\\\][A-Za-z]"), "") // Remove /E, /A, \B, etc. patterns
-            .replace(Regex("[\\^\\`\\~]"), "") // Remove caret, backtick, tilde
-            .replace(Regex("\\b[A-Z]{1,2}\\b(?![A-Z]{3,})"), "") // Remove single/double letter words like "E", "A", "B"
+            val originalLength = content.length
+            val cleaned = content
+                // Remove escape characters and control characters
+                .replace(Regex("[\\x00-\\x1F\\x7F]"), "")
+                .replace("\\e", "")
+                .replace("/E", "") // Remove /E artifacts
+                .replace("\\n", "\n")
+                .replace("\\t", "\t")
+                .replace("\\r", "")
+                
+                // Remove common OCR artifacts and meaningless patterns
+                .replace(Regex("\\blang\\b"), "") // Remove "lang" words
+                .replace(Regex("\\b\\d{1,2}\\b(?![0-9]{2,})"), "") // Remove single/double digits that aren't years
+                .replace(Regex("^\\s*[\\d\\s]+$"), "") // Remove lines that are only numbers and spaces
+                .replace(Regex("[/\\\\][A-Za-z]"), "") // Remove /E, /A, \B, etc. patterns
+                .replace(Regex("[\\^\\`\\~]"), "") // Remove caret, backtick, tilde
+                .replace(Regex("\\b[A-Z]{1,2}\\b(?![A-Z]{3,})"), "") // Remove single/double letter words like "E", "A", "B"
+                
+                // Remove common meaningless symbols and patterns
+                .replace(Regex("[\\[\\]{}|~`]"), "")
+                .replace(Regex("\\s+"), " ") // Replace multiple spaces with single space
+                
+                // Remove garbled text patterns and unwanted symbols
+                .replace(Regex("[?]{2,}"), "") // Remove multiple question marks
+                .replace(Regex("[^\\w\\s\\-\\.,;:!()@\\+]"), " ") // Keep only meaningful characters
+                .replace(Regex("\\s+"), " ") // Normalize spaces again
+                
+                // Remove lines that are too short or meaningless
+                .split("\n")
+                .filter { line ->
+                    val trimmed = line.trim()
+                    trimmed.length > 3 && // At least 4 characters
+                    !trimmed.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) && // Not just punctuation/numbers
+                    !trimmed.matches(Regex("^\\s*[a-z]\\s*$")) && // Not single letters
+                    !trimmed.lowercase().matches(Regex("^(page|section|chapter)\\s*\\d*$")) && // Not page/section markers
+                    !trimmed.matches(Regex("^\\s*[\\-_=]{3,}\\s*$")) && // Not separator lines
+                    !trimmed.matches(Regex("^[?\\s]+$")) && // Not just question marks and spaces
+                    !trimmed.matches(Regex("^[^a-zA-Z]*$")) && // Must contain at least one letter
+                    trimmed.contains(Regex("[a-zA-Z]{3,}")) // Must contain meaningful words
+                }
+                .map { line -> cleanLine(line) } // Clean each line individually
+                .filter { it.isNotEmpty() } // Remove empty lines
+                .joinToString("\n")
+                .trim()
             
-            // Remove common meaningless symbols and patterns
-            .replace(Regex("[\\[\\]{}|~`]"), "")
-            .replace(Regex("\\s+"), " ") // Replace multiple spaces with single space
-            
-            // Remove lines that are too short or meaningless
-            .split("\n")
-            .filter { line ->
-                val trimmed = line.trim()
-                trimmed.length > 2 && // At least 3 characters
-                !trimmed.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) && // Not just punctuation/numbers
-                !trimmed.matches(Regex("^\\s*[a-z]\\s*$")) && // Not single letters
-                !trimmed.lowercase().matches(Regex("^(page|section|chapter)\\s*\\d*$")) && // Not page/section markers
-                !trimmed.matches(Regex("^\\s*[\\-_=]{3,}\\s*$")) // Not separator lines
-            }
-            .joinToString("\n")
-            .trim()
-        
-        Log.d("DocumentExtractor", "Content cleaned: $originalLength -> ${cleaned.length} characters")
-        return cleaned
-    }
+            Log.d("DocumentExtractor", "Content cleaned: $originalLength -> ${cleaned.length} characters")
+            return cleaned
+        }
     
-    private fun cleanLine(line: String): String {
-        return line
-            .replace(Regex("[\\x00-\\x1F\\x7F]"), "") // Remove control characters
-            .replace(Regex("\\s+"), " ") // Normalize whitespace
-            .replace(Regex("^\\s*[\\d\\s\\-\\.,;:!?()]+$"), "") // Remove lines with only punctuation
-            .trim()
-    }
+        private fun cleanLine(line: String): String {
+            return line
+                .replace(Regex("[\\x00-\\x1F\\x7F]"), "") // Remove control characters
+                .replace(Regex("[?]{2,}"), "") // Remove multiple question marks
+                .replace(Regex("[^\\w\\s\\-\\.,;:!()@\\+]"), " ") // Keep only meaningful characters
+                .replace(Regex("\\s+"), " ") // Normalize whitespace
+                .replace(Regex("^\\s*[\\d\\s\\-\\.,;:!?()]+$"), "") // Remove lines with only punctuation
+                .trim()
+        }
 }

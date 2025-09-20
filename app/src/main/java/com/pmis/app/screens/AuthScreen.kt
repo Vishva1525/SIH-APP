@@ -9,9 +9,10 @@ import androidx.compose.ui.platform.LocalContext
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
-import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
+import com.pmis.app.data.SupabaseApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -374,16 +375,16 @@ private fun handleGoogleSignIn(
     @Suppress("UNUSED_PARAMETER") navController: androidx.navigation.NavController
 ) {
     try {
-        // Configure Google Sign-In with Web Client ID from strings.xml
+        // Configure Google Sign-In
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(context.getString(R.string.default_web_client_id))
+            .requestIdToken(context.getString(R.string.google_oauth_client_id))
             .requestEmail()
             .build()
 
         val googleSignInClient = GoogleSignIn.getClient(context, gso)
         val signInIntent = googleSignInClient.signInIntent
         
-        // Launch Google Sign-In activity using modern API
+        // Launch Google Sign-In activity
         context.startActivity(signInIntent)
         
         Log.d("GOOGLE_SIGNIN", "Google Sign-In initiated")
@@ -415,12 +416,37 @@ fun handleGoogleSignInResult(
             
             if (account != null) {
                 Log.d("GOOGLE_SIGNIN", "Sign-in successful: ${account.email}")
-                Toast.makeText(
-                    context, 
-                    "Welcome, ${account.displayName ?: account.email}!", 
-                    Toast.LENGTH_SHORT
-                ).show()
-                navController.navigate("main")
+                
+                // Send Google ID token to Supabase for authentication
+                CoroutineScope(Dispatchers.Main).launch {
+                    try {
+                        val result = SupabaseApi.signInWithGoogle(context, account.idToken ?: "")
+                        
+                        if (result.isSuccess) {
+                            Toast.makeText(
+                                context, 
+                                "Welcome, ${account.displayName ?: account.email}!", 
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            navController.navigate("main")
+                        } else {
+                            Log.e("SUPABASE_SIGNIN", "Supabase authentication failed", result.exceptionOrNull())
+                            Toast.makeText(
+                                context, 
+                                "Authentication failed: ${result.exceptionOrNull()?.message}", 
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    } catch (e: Exception) {
+                        Log.e("SUPABASE_SIGNIN", "Error during Supabase authentication", e)
+                        Toast.makeText(
+                            context, 
+                            "Authentication error: ${e.message}", 
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                
             } else {
                 Log.e("GOOGLE_SIGNIN", "Sign-in failed: No account data")
                 Toast.makeText(
