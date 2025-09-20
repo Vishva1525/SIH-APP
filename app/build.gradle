@@ -67,6 +67,10 @@ dependencies {
     // Image loading with Coil
     implementation 'io.coil-kt:coil-compose:2.5.0'
     
+    // File handling and document processing
+    implementation 'androidx.activity:activity-compose:1.8.2'
+    implementation 'androidx.documentfile:documentfile:1.0.1'
+    
     // Testing dependencies
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

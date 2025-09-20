@@ -21,12 +21,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.pmis.app.R
 import com.pmis.app.ui.theme.PMISAppTheme
 
 @Composable
 fun WelcomeScreen(
-    onGetStartedClick: () -> Unit
+    navController: NavController
 ) {
     Column(
         modifier = Modifier
@@ -72,7 +74,9 @@ fun WelcomeScreen(
         
         // CTA Button at the bottom
         Button(
-            onClick = onGetStartedClick,
+            onClick = { 
+                navController.navigate("auth")
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -96,7 +100,7 @@ fun WelcomeScreen(
 fun WelcomeScreenPreview() {
     PMISAppTheme {
         WelcomeScreen(
-            onGetStartedClick = { }
+            navController = rememberNavController()
         )
     }
 }

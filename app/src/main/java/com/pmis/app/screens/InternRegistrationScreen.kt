@@ -15,8 +15,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -51,12 +51,33 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-// import androidx.compose.ui.text.input.KeyboardOptions // not used currently
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.size
 import com.pmis.app.ui.theme.PMISAppTheme
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import com.pmis.app.utils.DocumentExtractor
+import java.io.File
+import android.net.Uri
 
 private enum class InternStep(val label: String) {
     BasicInfo("Basic Info"),
@@ -159,7 +180,7 @@ fun InternRegistrationScreen() {
                 onClick = { if (currentStep > 0) currentStep -= 1 },
                 enabled = currentStep > 0
             ) {
-                Icon(Icons.Default.KeyboardArrowLeft, contentDescription = null)
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Back")
             }
@@ -185,7 +206,7 @@ fun InternRegistrationScreen() {
             ) {
                 Text(if (currentStep == steps.lastIndex) "Activate My Smart Recommendations 🚀" else "Next")
                 Spacer(modifier = Modifier.width(8.dp))
-                Icon(Icons.Default.KeyboardArrowRight, contentDescription = null)
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
             }
         }
     }
@@ -217,11 +238,22 @@ private fun BasicInfoStep(state: InternFormState) {
     SectionTitle(text = "Basic Info", description = "Tell us a little about yourself.")
     Spacer(modifier = Modifier.height(16.dp))
 
+    val keyboard = LocalSoftwareKeyboardController.current
+    val nameFocus = remember { FocusRequester() }
     OutlinedTextField(
         value = state.fullName,
         onValueChange = { state.fullName = it },
         label = { Text("Full Name *") },
-        modifier = Modifier.fillMaxWidth()
+        keyboardOptions = KeyboardOptions(
+            capitalization = KeyboardCapitalization.Words,
+            keyboardType = KeyboardType.Text,
+            imeAction = ImeAction.Next
+        ),
+        keyboardActions = KeyboardActions(onNext = { keyboard?.hide() }),
+        modifier = Modifier
+            .fillMaxWidth()
+            .focusRequester(nameFocus)
+            .onFocusChanged { if (it.isFocused) keyboard?.show() }
     )
     Spacer(modifier = Modifier.height(12.dp))
 
@@ -230,6 +262,7 @@ private fun BasicInfoStep(state: InternFormState) {
         onValueChange = { state.verifiedId = it },
         label = { Text("Verified ID (Aadhaar/DigiLocker) — coming soon") },
         placeholder = { Text("Enter ID or leave blank") },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, imeAction = ImeAction.Next),
         modifier = Modifier.fillMaxWidth()
     )
     Spacer(modifier = Modifier.height(12.dp))
@@ -239,50 +272,47 @@ private fun BasicInfoStep(state: InternFormState) {
         onValueChange = { state.collegeName = it },
         label = { Text("College Name *") },
         placeholder = { Text("Start typing your college") },
+        keyboardOptions = KeyboardOptions(
+            capitalization = KeyboardCapitalization.Words,
+            keyboardType = KeyboardType.Text,
+            imeAction = ImeAction.Done
+        ),
+        keyboardActions = KeyboardActions(onDone = { keyboard?.hide() }),
         modifier = Modifier.fillMaxWidth()
     )
     Spacer(modifier = Modifier.height(12.dp))
 
-    val years = listOf("Select", "1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year", "Graduated")
+    val years = listOf("1st Year", "2nd Year", "3rd Year", "4th Year")
     var expanded by remember { mutableStateOf(false) }
-    var textFieldValue by remember { mutableStateOf(state.yearOfStudy.ifBlank { "Select" }) }
-    
-    // Update text field when state changes
-    LaunchedEffect(state.yearOfStudy) {
-        textFieldValue = state.yearOfStudy.ifBlank { "Select" }
-    }
-    
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+
+    ExposedDropdownMenuBox(
+        expanded = expanded, 
+        onExpandedChange = { expanded = !expanded }
+    ) {
         OutlinedTextField(
-            value = textFieldValue,
-            onValueChange = { newValue ->
-                textFieldValue = newValue
-                // Allow typing and search functionality
-                if (newValue.isNotBlank() && newValue != "Select") {
-                    state.yearOfStudy = newValue
-                }
+            value = state.yearOfStudy.ifBlank { "Select Year of Study" },
+            onValueChange = { /* Read-only field */ },
+            readOnly = true,
+            label = { Text("Year of Study *") },
+            trailingIcon = { 
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) 
             },
-            readOnly = false, // Allow typing
-            label = { Text("Year of Study") },
-            placeholder = { Text("Type to search or select") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
+                .menuAnchor()
         )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            // Filter options based on typed text
-            val filteredOptions = if (textFieldValue.isNotBlank() && textFieldValue != "Select") {
-                years.filter { it.contains(textFieldValue, ignoreCase = true) }
-            } else {
-                years
-            }
-            
-            filteredOptions.forEach { option ->
-                DropdownMenuItem(text = { Text(option) }, onClick = {
-                    textFieldValue = option
-                    state.yearOfStudy = if (option == "Select") "" else option
-                    expanded = false
-                })
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            years.forEach { year ->
+                DropdownMenuItem(
+                    text = { Text(year) },
+                    onClick = {
+                        state.yearOfStudy = year
+                        expanded = false
+                    }
+                )
             }
         }
     }
@@ -290,45 +320,146 @@ private fun BasicInfoStep(state: InternFormState) {
 
 @Composable
 private fun ResumeStep(state: InternFormState) {
+    val context = LocalContext.current
+    var isExtracting by remember { mutableStateOf(false) }
+    var uploadStatus by remember { mutableStateOf("") }
+    
     SectionTitle(text = "Resume (optional)", description = "Upload your resume. We'll auto-extract details you can edit.")
     Spacer(modifier = Modifier.height(16.dp))
 
-    // Placeholder for file upload (implementation pending)
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+    var selectedUri by remember { mutableStateOf<Uri?>(null) }
+    
+    // File picker launcher
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { 
+            selectedUri = it
+            state.resumePath = it.toString()
+            uploadStatus = "Resume uploaded successfully!"
+            isExtracting = true
+        }
+    }
+    
+    // Handle extraction when a file is selected
+    LaunchedEffect(selectedUri) {
+        selectedUri?.let { uri ->
+            try {
+                val extractor = DocumentExtractor(context)
+                val extractedContent = extractor.extractFromUri(uri)
+                state.extractedEducation = extractedContent.education
+                state.extractedSkills = extractedContent.skills
+                state.extractedExperience = extractedContent.experience
+                uploadStatus = "Resume processed! Review and edit the extracted information below."
+            } catch (e: Exception) {
+                uploadStatus = "Error processing resume: ${e.message}"
+            } finally {
+                isExtracting = false
+            }
+        }
+    }
+
+    // Upload section
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { 
+                if (!isExtracting) {
+                    filePickerLauncher.launch("*/*") // Accept all file types
+                }
+            }
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Choose file", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
-            Text(
-                text = "Resume upload is optional in this preview.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isExtracting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        "Processing resume...", 
+                        color = MaterialTheme.colorScheme.primary, 
+                        fontWeight = FontWeight.SemiBold
+                    )
+                } else {
+                    Text(
+                        "📁 Click to browse and upload resume", 
+                        color = MaterialTheme.colorScheme.primary, 
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+            
+            if (uploadStatus.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = uploadStatus,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (uploadStatus.contains("Error")) 
+                        MaterialTheme.colorScheme.error 
+                    else 
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            if (state.resumePath.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "📄 Resume: ${File(state.resumePath).name}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 
     Spacer(modifier = Modifier.height(16.dp))
+    
+    // Extracted content section
     Text(text = "Extracted info (editable)", fontWeight = FontWeight.SemiBold)
     Spacer(modifier = Modifier.height(8.dp))
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = state.extractedEducation,
             onValueChange = { state.extractedEducation = it },
             label = { Text("Education") },
-            modifier = Modifier.weight(1f),
-            minLines = 4
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 3,
+            maxLines = 6,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Done
+            )
         )
+        
         OutlinedTextField(
             value = state.extractedSkills,
             onValueChange = { state.extractedSkills = it },
             label = { Text("Skills") },
-            modifier = Modifier.weight(1f),
-            minLines = 4
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 3,
+            maxLines = 6,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Done
+            )
         )
+        
         OutlinedTextField(
             value = state.extractedExperience,
             onValueChange = { state.extractedExperience = it },
             label = { Text("Experience") },
-            modifier = Modifier.weight(1f),
-            minLines = 4
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 3,
+            maxLines = 6,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Done
+            )
         )
     }
 }

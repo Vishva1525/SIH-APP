@@ -5,6 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.pmis.app.screens.AboutScreen
+import com.pmis.app.screens.AuthScreen
 import com.pmis.app.screens.ContactScreen
 import com.pmis.app.screens.EmployersScreen
 import com.pmis.app.screens.GuidelinesScreen
@@ -26,10 +27,12 @@ fun PMISNavigation() {
     ) {
         composable("welcome") {
             WelcomeScreen(
-                onGetStartedClick = {
-                    navController.navigate("main")
-                }
+                navController = navController
             )
+        }
+        
+        composable("auth") {
+            AuthScreen(navController = navController)
         }
         
         composable("main") {
