@@ -17,7 +17,7 @@
     
     Example: 123456789-abcdef1234567890abcdef1234567890.apps.googleusercontent.com
     -->
-    <string name="default_web_client_id">REPLACE_WITH_WEB_CLIENT_ID.apps.googleusercontent.com</string>
+    <string name="default_web_client_id">777495340370-kghb0uoo328bjfmk2un9letqp2lbqo2b.apps.googleusercontent.com</string>
     
     <!-- Welcome Screen Strings -->
     <string name="welcome_message">Welcome to the PM Internship Scheme</string>

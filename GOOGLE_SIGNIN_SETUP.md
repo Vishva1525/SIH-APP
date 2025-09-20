@@ -1,5 +1,11 @@
 # Google Sign-In Setup Instructions
 
+## ✅ Your Configuration Details
+
+**Your Web Client ID**: `777495340370-kghb0uoo328bjfmk2un9letqp2lbqo2b.apps.googleusercontent.com`  
+**Your Project Number**: `777495340370`  
+**Package Name**: `com.pmis.app`
+
 ## Important: google-services.json Configuration
 
 **⚠️ CRITICAL STEP**: You must download the latest `google-services.json` file from Firebase Console after adding your SHA-1 fingerprint.
