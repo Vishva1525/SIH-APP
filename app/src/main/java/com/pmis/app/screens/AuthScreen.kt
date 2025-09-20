@@ -144,23 +144,27 @@ fun AuthScreen(navController: NavController) {
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             val account = task.getResult(ApiException::class.java)
             
-            val credential = GoogleAuthProvider.getCredential(account.idToken, null)
-            auth.signInWithCredential(credential)
-                .addOnCompleteListener { authTask ->
-                    if (authTask.isSuccessful) {
-                        val user = auth.currentUser
-                        Log.d("AuthScreen", "Google sign-in successful: ${user?.email}")
-                        Toast.makeText(context, "Welcome, ${user?.displayName}!", Toast.LENGTH_SHORT).show()
-                        navController.navigate("main")
-                    } else {
-                        Log.e("AuthScreen", "Google sign-in failed", authTask.exception)
-                        Toast.makeText(context, "Sign-in failed: ${authTask.exception?.message}", Toast.LENGTH_LONG).show()
-                    }
-                    isGoogleSigningIn = false
-                }
+            if (account != null) {
+                Log.d("AuthScreen", "Google sign-in successful: ${account.email}")
+                Toast.makeText(context, "Welcome, ${account.displayName}!", Toast.LENGTH_SHORT).show()
+                navController.navigate("main")
+            } else {
+                Log.e("AuthScreen", "Google sign-in failed: No account data")
+                Toast.makeText(context, "Sign-in failed: No account data", Toast.LENGTH_LONG).show()
+            }
+            isGoogleSigningIn = false
         } catch (e: ApiException) {
-            Log.e("AuthScreen", "Google sign-in error", e)
-            Toast.makeText(context, "Sign-in error: ${e.message}", Toast.LENGTH_LONG).show()
+            Log.e("AuthScreen", "Google sign-in error: ${e.statusCode}", e)
+            when (e.statusCode) {
+                10 -> Toast.makeText(context, "Sign-in error: Developer error - Check Google Console configuration", Toast.LENGTH_LONG).show()
+                12501 -> Toast.makeText(context, "Sign-in cancelled by user", Toast.LENGTH_SHORT).show()
+                7 -> Toast.makeText(context, "Network error - Check your internet connection", Toast.LENGTH_LONG).show()
+                else -> Toast.makeText(context, "Sign-in error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+            isGoogleSigningIn = false
+        } catch (e: Exception) {
+            Log.e("AuthScreen", "Unexpected Google sign-in error", e)
+            Toast.makeText(context, "Unexpected error: ${e.message}", Toast.LENGTH_LONG).show()
             isGoogleSigningIn = false
         }
     }
@@ -254,14 +258,20 @@ fun AuthScreen(navController: NavController) {
         Button(
             onClick = { 
                 isGoogleSigningIn = true
-                val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                    .requestIdToken("123456789-abcdef1234567890.apps.googleusercontent.com") // Replace with actual client ID
-                    .requestEmail()
-                    .build()
+                try {
+                    // Use DEFAULT_SIGN_IN without custom client ID for testing
+                    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                        .requestEmail()
+                        .build()
 
-                val googleSignInClient = GoogleSignIn.getClient(context, gso)
-                val signInIntent = googleSignInClient.signInIntent
-                googleSignInLauncher.launch(signInIntent)
+                    val googleSignInClient = GoogleSignIn.getClient(context, gso)
+                    val signInIntent = googleSignInClient.signInIntent
+                    googleSignInLauncher.launch(signInIntent)
+                } catch (e: Exception) {
+                    Log.e("AuthScreen", "Google Sign-In setup error", e)
+                    Toast.makeText(context, "Google Sign-In setup failed: ${e.message}", Toast.LENGTH_LONG).show()
+                    isGoogleSigningIn = false
+                }
             },
             modifier = Modifier
                 .fillMaxWidth()
