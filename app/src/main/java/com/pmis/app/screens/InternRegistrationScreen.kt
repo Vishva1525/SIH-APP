@@ -65,6 +65,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.size
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.background
 import com.pmis.app.ui.theme.PMISAppTheme
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -331,190 +343,247 @@ private fun ResumeStep(
     val context = LocalContext.current
     var isExtracting by remember { mutableStateOf(false) }
     var uploadStatus by remember { mutableStateOf("") }
+    val scrollState = rememberScrollState()
     
-    SectionTitle(text = "Resume (optional)", description = "Upload your resume. We'll auto-extract details you can edit.")
-    Spacer(modifier = Modifier.height(16.dp))
-
-    var selectedUri by remember { mutableStateOf<Uri?>(null) }
-    
-    // File picker launcher
-    val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let { 
-            selectedUri = it
-            state.resumePath = it.toString()
-            uploadStatus = "Resume uploaded successfully!"
-            isExtracting = true
-        }
-    }
-    
-    // Handle extraction when a file is selected
-    LaunchedEffect(selectedUri) {
-        selectedUri?.let { uri ->
-            try {
-                val extractor = DocumentExtractor(context)
-                val extractedContent = extractor.extractFromUri(uri)
-                state.extractedEducation = extractedContent.education
-                state.extractedSkills = extractedContent.skills
-                state.extractedExperience = extractedContent.experience
-                uploadStatus = "Resume processed! Review and edit the extracted information below."
-            } catch (e: Exception) {
-                uploadStatus = "Error processing resume: ${e.message}"
-            } finally {
-                isExtracting = false
-            }
-        }
-    }
-
-    // Upload section
-    ElevatedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { 
-                if (!isExtracting) {
-                    filePickerLauncher.launch("*/*") // Accept all file types
-                }
-            }
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxSize()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (isExtracting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        "Processing resume...", 
-                        color = MaterialTheme.colorScheme.primary, 
-                        fontWeight = FontWeight.SemiBold
-                    )
-                } else {
-                    Text(
-                        "📁 Click to browse and upload resume", 
-                        color = MaterialTheme.colorScheme.primary, 
-                        fontWeight = FontWeight.SemiBold
-                    )
+        val maxHeight = maxHeight
+        
+        // Scrollable content
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(bottom = 80.dp) // Space for sticky buttons
+        ) {
+            SectionTitle(text = "Resume (optional)", description = "Upload your resume. We'll auto-extract details you can edit.")
+            Spacer(modifier = Modifier.height(16.dp))
+
+            var selectedUri by remember { mutableStateOf<Uri?>(null) }
+            
+            // File picker launcher
+            val filePickerLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.GetContent()
+            ) { uri ->
+                uri?.let { 
+                    selectedUri = it
+                    state.resumePath = it.toString()
+                    uploadStatus = "Resume uploaded successfully!"
+                    isExtracting = true
                 }
             }
             
-            if (uploadStatus.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = uploadStatus,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (uploadStatus.contains("Error")) 
-                        MaterialTheme.colorScheme.error 
-                    else 
-                        MaterialTheme.colorScheme.onSurfaceVariant
+            // Handle extraction when a file is selected
+            LaunchedEffect(selectedUri) {
+                selectedUri?.let { uri ->
+                    try {
+                        val extractor = DocumentExtractor(context)
+                        val extractedContent = extractor.extractFromUri(uri)
+                        state.extractedEducation = extractedContent.education
+                        state.extractedSkills = extractedContent.skills
+                        state.extractedExperience = extractedContent.experience
+                        uploadStatus = "Resume processed! Review and edit the extracted information below."
+                    } catch (e: Exception) {
+                        uploadStatus = "Error processing resume: ${e.message}"
+                    } finally {
+                        isExtracting = false
+                    }
+                }
+            }
+
+            // Upload section
+            ElevatedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { 
+                        if (!isExtracting) {
+                            filePickerLauncher.launch("*/*") // Accept all file types
+                        }
+                    }
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isExtracting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                "Processing resume...", 
+                                color = MaterialTheme.colorScheme.primary, 
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        } else {
+                            Text(
+                                "📁 Click to browse and upload resume", 
+                                color = MaterialTheme.colorScheme.primary, 
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                    
+                    if (uploadStatus.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = uploadStatus,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (uploadStatus.contains("Error")) 
+                                MaterialTheme.colorScheme.error 
+                            else 
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    
+                    if (state.resumePath.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "📄 Resume: ${File(state.resumePath).name}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Extracted content section
+            AnimatedVisibility(
+                visible = state.extractedEducation.isNotEmpty() || 
+                         state.extractedSkills.isNotEmpty() || 
+                         state.extractedExperience.isNotEmpty(),
+                enter = fadeIn(animationSpec = tween(300)) + slideInHorizontally(
+                    initialOffsetX = { it / 3 },
+                    animationSpec = tween(300)
+                ),
+                exit = fadeOut(animationSpec = tween(300))
+            ) {
+                Column {
+                    Text(text = "Extracted info (editable)", fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(
+                            value = state.extractedEducation,
+                            onValueChange = { state.extractedEducation = it },
+                            label = { Text("Education") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 3,
+                            maxLines = 6,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Done
+                            )
+                        )
+                        
+                        OutlinedTextField(
+                            value = state.extractedSkills,
+                            onValueChange = { state.extractedSkills = it },
+                            label = { Text("Skills") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 3,
+                            maxLines = 6,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Done
+                            )
+                        )
+                        
+                        OutlinedTextField(
+                            value = state.extractedExperience,
+                            onValueChange = { state.extractedExperience = it },
+                            label = { Text("Experience") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 3,
+                            maxLines = 6,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Done
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    
+        // Sticky navigation buttons at bottom
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset(y = maxHeight - 80.dp)
+                .background(
+                    MaterialTheme.colorScheme.surface,
+                    androidx.compose.foundation.shape.RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
                 )
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Back button with animation
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn(animationSpec = tween(300)) + slideInHorizontally(
+                    initialOffsetX = { -it / 2 },
+                    animationSpec = tween(300)
+                ),
+                exit = fadeOut(animationSpec = tween(200)) + slideOutHorizontally(
+                    targetOffsetX = { -it / 2 },
+                    animationSpec = tween(200)
+                )
+            ) {
+                OutlinedButton(
+                    onClick = { onNavigateToStep(InternStep.BasicInfo) },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowLeft, 
+                        contentDescription = "Back",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Back")
+                }
             }
             
-            if (state.resumePath.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "📄 Resume: ${File(state.resumePath).name}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            // Next button with animation
+            AnimatedVisibility(
+                visible = true,
+                enter = fadeIn(animationSpec = tween(300)) + slideInHorizontally(
+                    initialOffsetX = { it / 2 },
+                    animationSpec = tween(300)
+                ),
+                exit = fadeOut(animationSpec = tween(200)) + slideOutHorizontally(
+                    targetOffsetX = { it / 2 },
+                    animationSpec = tween(200)
+                )
+            ) {
+                Button(
+                    onClick = { onNavigateToStep(InternStep.Skills) },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                ) {
+                    Text("Next")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight, 
+                        contentDescription = "Next",
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
-        }
-    }
-
-    Spacer(modifier = Modifier.height(16.dp))
-    
-    // Extracted content section
-    Text(text = "Extracted info (editable)", fontWeight = FontWeight.SemiBold)
-    Spacer(modifier = Modifier.height(8.dp))
-    
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(
-            value = state.extractedEducation,
-            onValueChange = { state.extractedEducation = it },
-            label = { Text("Education") },
-            modifier = Modifier.fillMaxWidth(),
-            minLines = 3,
-            maxLines = 6,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Text,
-                imeAction = ImeAction.Done
-            )
-        )
-        
-        OutlinedTextField(
-            value = state.extractedSkills,
-            onValueChange = { state.extractedSkills = it },
-            label = { Text("Skills") },
-            modifier = Modifier.fillMaxWidth(),
-            minLines = 3,
-            maxLines = 6,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Text,
-                imeAction = ImeAction.Done
-            )
-        )
-        
-        OutlinedTextField(
-            value = state.extractedExperience,
-            onValueChange = { state.extractedExperience = it },
-            label = { Text("Experience") },
-            modifier = Modifier.fillMaxWidth(),
-            minLines = 3,
-            maxLines = 6,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Text,
-                imeAction = ImeAction.Done
-            )
-        )
-    }
-    
-    // Navigation buttons
-    Spacer(modifier = Modifier.height(32.dp))
-    
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Back button
-        OutlinedButton(
-            onClick = { onNavigateToStep(InternStep.BasicInfo) },
-            modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowLeft, 
-                contentDescription = "Back",
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Back")
-        }
-        
-        Spacer(modifier = Modifier.width(16.dp))
-        
-        // Next button
-        Button(
-            onClick = { onNavigateToStep(InternStep.Skills) },
-            modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
-        ) {
-            Text("Next")
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight, 
-                contentDescription = "Next",
-                modifier = Modifier.size(18.dp)
-            )
         }
     }
 }
