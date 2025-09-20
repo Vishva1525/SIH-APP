@@ -97,6 +97,9 @@ private fun handleGoogleSignIn(context: android.content.Context, navController: 
 
 @Composable
 fun AuthScreen(navController: NavController) {
+    // Debug log to verify AuthScreen is loaded
+    Log.d("AuthScreen", "AuthScreen composable loaded - NEW VERSION")
+    
     // State management
     var showUnifiedInput by remember { mutableStateOf(false) }
     var unifiedInputText by remember { mutableStateOf("") }
@@ -117,7 +120,7 @@ fun AuthScreen(navController: NavController) {
     ) {
         // Title
         Text(
-            text = "Login or Sign Up",
+            text = "Login or Sign Up (NEW)",
             style = MaterialTheme.typography.headlineLarge.copy(
                 fontWeight = FontWeight.Bold,
                 fontSize = 32.sp
