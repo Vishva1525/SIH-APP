@@ -56,9 +56,9 @@ class DocumentExtractor(private val context: Context) {
             val experience = extractExperienceDetails(lines)
             
             return ExtractedResumeData(
-                education = cleanAndFormatContent(education).ifEmpty { "No education information found. Please add manually." },
-                skills = cleanAndFormatContent(skills).ifEmpty { "No skills information found. Please add manually." },
-                experience = cleanAndFormatContent(experience).ifEmpty { "No experience information found. Please add manually." }
+                education = education.ifEmpty { "No education information found. Please add manually." },
+                skills = skills.ifEmpty { "No skills information found. Please add manually." },
+                experience = experience.ifEmpty { "No experience information found. Please add manually." }
             )
         }
     
@@ -138,11 +138,10 @@ class DocumentExtractor(private val context: Context) {
     private fun extractEducationDetails(lines: List<String>): String {
         val educationKeywords = listOf("education", "academic", "qualification", "degree", "university", "college", "school")
         val degreeKeywords = listOf("b.tech", "btech", "bachelor", "master", "mtech", "m.tech", "phd", "diploma", "bsc", "msc", "ba", "ma", "bca", "mca", "be", "me", "b.e", "m.e")
-        val institutionKeywords = listOf("university", "college", "institute", "school", "iit", "nit", "iiit")
+        val institutionKeywords = listOf("university", "college", "institute", "school", "iit", "nit", "iiit", "svce")
         
         val educationEntries = mutableListOf<EducationEntry>()
         var inEducationSection = false
-        var currentEntry: EducationEntry? = null
         
         for (i in lines.indices) {
             val line = lines[i]
@@ -174,33 +173,14 @@ class DocumentExtractor(private val context: Context) {
                 if (extractedEntry != null) {
                     educationEntries.add(extractedEntry)
                 } else {
-                    // Check if this line contains degree or institution info
-                    val degree = extractDegreeFromLine(cleanLineText, degreeKeywords)
-                    val institution = extractInstitutionFromLine(cleanLineText, institutionKeywords)
-                    
-                    if (degree.isNotEmpty() || institution.isNotEmpty()) {
-                        if (currentEntry == null) {
-                            currentEntry = EducationEntry("", "", "")
-                        }
-                        if (degree.isNotEmpty()) currentEntry.degree = degree
-                        if (institution.isNotEmpty()) currentEntry.institution = institution
-                        
-                        // Try to extract year from this line or next lines
-                        val year = extractYearFromLine(cleanLineText) ?: 
-                                  if (i < lines.size - 1) extractYearFromLine(cleanLine(lines[i + 1])) else null
-                        if (year != null) currentEntry.year = year
-                        
-                        if (currentEntry.isComplete()) {
-                            educationEntries.add(currentEntry)
-                            currentEntry = null
-                        }
+                    // Try to extract from common patterns
+                    val entry = extractEducationFromPatterns(cleanLineText, degreeKeywords, institutionKeywords)
+                    if (entry != null) {
+                        educationEntries.add(entry)
                     }
                 }
             }
         }
-        
-        // Add any remaining current entry
-        currentEntry?.let { if (it.hasContent()) educationEntries.add(it) }
         
         // Sort by year (most recent first)
         val sortedEntries = educationEntries.sortedByDescending { it.getYearInt() }
@@ -210,6 +190,43 @@ class DocumentExtractor(private val context: Context) {
         Log.d("DocumentExtractor", "Extracted education entries: ${educationEntries.size}")
         Log.d("DocumentExtractor", "Formatted education result: $result")
         return result
+    }
+    
+    private fun extractEducationFromPatterns(line: String, degreeKeywords: List<String>, institutionKeywords: List<String>): EducationEntry? {
+        val lowerLine = line.lowercase()
+        
+        // Pattern 1: "Bachelor of Engineering at Sri Venkateswara College of Engineering"
+        val atPattern = Regex("([a-zA-Z.\\s]+(?:engineering|technology|science|arts|commerce|management|computer|information|electronics|mechanical|civil|electrical))\\s+at\\s+([a-zA-Z\\s]+)", RegexOption.IGNORE_CASE)
+        val atMatch = atPattern.find(line)
+        if (atMatch != null) {
+            val degree = atMatch.groupValues[1].trim()
+            val institution = atMatch.groupValues[2].trim()
+            return EducationEntry(degree, institution, "")
+        }
+        
+        // Pattern 2: Look for degree keywords followed by institution
+        for (degreeKeyword in degreeKeywords) {
+            if (lowerLine.contains(degreeKeyword)) {
+                // Try to extract institution
+                val institution = extractInstitutionFromLine(line, institutionKeywords)
+                if (institution.isNotEmpty()) {
+                    return EducationEntry(degreeKeyword.uppercase(), institution, "")
+                }
+            }
+        }
+        
+        // Pattern 3: Look for institution keywords
+        for (institutionKeyword in institutionKeywords) {
+            if (lowerLine.contains(institutionKeyword)) {
+                // Try to extract degree
+                val degree = extractDegreeFromLine(line, degreeKeywords)
+                if (degree.isNotEmpty()) {
+                    return EducationEntry(degree, line.trim(), "")
+                }
+            }
+        }
+        
+        return null
     }
     
     private fun extractSkillsDetails(lines: List<String>): String {
@@ -346,8 +363,10 @@ class DocumentExtractor(private val context: Context) {
         return degree
             .replace(Regex("\\(.*?\\)"), "") // Remove parentheses content
             .replace(Regex("\\s+"), " ") // Normalize spaces
-            .replace(Regex("\\bof\\s+engineering\\b", RegexOption.IGNORE_CASE), "E")
-            .replace(Regex("\\bof\\s+technology\\b", RegexOption.IGNORE_CASE), "T")
+            .replace(Regex("\\bbachelor\\s+of\\s+engineering\\b", RegexOption.IGNORE_CASE), "B.E")
+            .replace(Regex("\\bbachelor\\s+of\\s+technology\\b", RegexOption.IGNORE_CASE), "B.Tech")
+            .replace(Regex("\\bmaster\\s+of\\s+engineering\\b", RegexOption.IGNORE_CASE), "M.E")
+            .replace(Regex("\\bmaster\\s+of\\s+technology\\b", RegexOption.IGNORE_CASE), "M.Tech")
             .replace(Regex("\\bbachelor\\b", RegexOption.IGNORE_CASE), "B")
             .replace(Regex("\\bmaster\\b", RegexOption.IGNORE_CASE), "M")
             .replace(Regex("\\bin\\s+", RegexOption.IGNORE_CASE), " in ")
@@ -364,30 +383,6 @@ class DocumentExtractor(private val context: Context) {
         fun getYearInt(): Int = year.toIntOrNull() ?: 0
     }
     
-        private fun cleanAndFormatContent(content: String): String {
-            if (content.isEmpty()) return content
-            
-            val cleaned = cleanContent(content)
-            
-            // Additional formatting for better readability
-            return cleaned
-                .split("\n")
-                .map { line -> 
-                    line.trim()
-                        .replace(Regex("\\s+"), " ") // Normalize spaces
-                        .replace(Regex("^[\\-\\*\\+]\\s*"), "") // Remove bullet points
-                        .replace(Regex("^\\d+\\.\\s*"), "") // Remove numbered lists
-                        .trim()
-                }
-                .filter { line -> 
-                    line.length > 3 && 
-                    !line.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) &&
-                    line.contains(Regex("[a-zA-Z]{3,}"))
-                }
-                .distinct() // Remove duplicate lines
-                .joinToString("\n")
-                .trim()
-        }
         
         private fun cleanAndFormatSkills(skillsContent: String): String {
             if (skillsContent.isEmpty()) return skillsContent
@@ -405,13 +400,15 @@ class DocumentExtractor(private val context: Context) {
                         .replace(Regex("\\s*–\\s*[^–]*$"), "") // Remove "– Platform" suffixes like "– HackerRank"
                         .replace(Regex("\\s*\\-\\s*[^\\-]*$"), "") // Remove "- Platform" suffixes
                         .replace(Regex("\\s*\\|\\s*[^|]*$"), "") // Remove "| Platform" suffixes
+                        .replace(Regex("\\s*\\(.*?\\)\\s*"), "") // Remove any remaining parentheses
                         .trim()
                 }
                 .filter { line -> 
                     line.length > 2 && 
                     !line.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) &&
                     line.contains(Regex("[a-zA-Z]{2,}")) &&
-                    !line.lowercase().matches(Regex(".*(basic|intermediate|advanced|beginner|expert).*")) // Remove skill level indicators
+                    !line.lowercase().matches(Regex(".*(basic|intermediate|advanced|beginner|expert).*")) && // Remove skill level indicators
+                    !line.lowercase().matches(Regex(".*(hackerrank|leetcode|coursera|udemy|edx|platform).*")) // Remove platform names
                 }
                 .distinct() // Remove duplicates
                 .joinToString(", ") // Join with commas for better readability
@@ -436,11 +433,46 @@ class DocumentExtractor(private val context: Context) {
                     line.length > 10 && // Experience entries should be longer
                     !line.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) &&
                     line.contains(Regex("[a-zA-Z]{3,}")) &&
-                    !line.lowercase().matches(Regex("^(page|section|chapter)\\s*\\d*$")) // Remove page markers
+                    !line.lowercase().matches(Regex("^(page|section|chapter)\\s*\\d*$")) && // Remove page markers
+                    (line.lowercase().contains("intern") || 
+                     line.lowercase().contains("experience") || 
+                     line.lowercase().contains("work") || 
+                     line.lowercase().contains("project") ||
+                     line.lowercase().contains("research") ||
+                     line.contains("–") || line.contains("-")) // Must look like a job/project entry
                 }
+                .map { line -> formatExperienceLine(line) } // Format each experience line
                 .distinct() // Remove duplicates
                 .joinToString("\n") // Keep as separate lines for experience entries
                 .trim()
+        }
+        
+        private fun formatExperienceLine(line: String): String {
+            // Try to format: "Computer Vision Intern - Clustrex Data Private Limited (Jan 2025 - Feb 2025)"
+            val internPattern = Regex("([a-zA-Z\\s]+intern)\\s*[-–]\\s*([a-zA-Z\\s]+)(?:\\(([^)]+)\\))?", RegexOption.IGNORE_CASE)
+            val internMatch = internPattern.find(line)
+            if (internMatch != null) {
+                val position = internMatch.groupValues[1].trim()
+                val company = internMatch.groupValues[2].trim()
+                val dates = internMatch.groupValues[3].trim()
+                return if (dates.isNotEmpty()) {
+                    "$position – $company ($dates)"
+                } else {
+                    "$position – $company"
+                }
+            }
+            
+            // Try to format: "AGRIHUB: Revolutionizing Indian Agriculture Using Machine Learning"
+            val projectPattern = Regex("([a-zA-Z0-9\\s]+):\\s*(.+)", RegexOption.IGNORE_CASE)
+            val projectMatch = projectPattern.find(line)
+            if (projectMatch != null) {
+                val projectName = projectMatch.groupValues[1].trim()
+                val description = projectMatch.groupValues[2].trim()
+                return "$projectName: $description"
+            }
+            
+            // Default: return cleaned line
+            return line.trim()
         }
 
         private fun cleanContent(content: String): String {
