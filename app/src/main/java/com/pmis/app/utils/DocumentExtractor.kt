@@ -55,10 +55,11 @@ class DocumentExtractor(private val context: Context) {
             val skills = extractSkillsDetails(lines)
             val experience = extractExperienceDetails(lines)
             
+            // Final safeguard: If a field is empty after cleaning, leave it blank for user to fill manually
             return ExtractedResumeData(
-                education = education.ifEmpty { "No education information found. Please add manually." },
-                skills = skills.ifEmpty { "No skills information found. Please add manually." },
-                experience = experience.ifEmpty { "No experience information found. Please add manually." }
+                education = if (education.isBlank() || education.length < 5) "" else education,
+                skills = if (skills.isBlank() || skills.length < 3) "" else skills,
+                experience = if (experience.isBlank() || experience.length < 10) "" else experience
             )
         }
     
@@ -328,7 +329,7 @@ class DocumentExtractor(private val context: Context) {
         return entries.joinToString("\n") { entry ->
             val parts = mutableListOf<String>()
             
-            // Format: Institution – Degree (Year)
+            // Format: Institution – Degree in Specialization (Year)
             if (entry.institution.isNotEmpty()) {
                 parts.add(entry.institution)
             }
@@ -363,6 +364,8 @@ class DocumentExtractor(private val context: Context) {
         return degree
             .replace(Regex("\\(.*?\\)"), "") // Remove parentheses content
             .replace(Regex("\\s+"), " ") // Normalize spaces
+            .replace(Regex("\\bbachelor\\s+of\\s+engineering\\s+in\\s+([a-zA-Z\\s]+)\\b", RegexOption.IGNORE_CASE), "B.E in $1")
+            .replace(Regex("\\bbachelor\\s+of\\s+technology\\s+in\\s+([a-zA-Z\\s]+)\\b", RegexOption.IGNORE_CASE), "B.Tech in $1")
             .replace(Regex("\\bbachelor\\s+of\\s+engineering\\b", RegexOption.IGNORE_CASE), "B.E")
             .replace(Regex("\\bbachelor\\s+of\\s+technology\\b", RegexOption.IGNORE_CASE), "B.Tech")
             .replace(Regex("\\bmaster\\s+of\\s+engineering\\b", RegexOption.IGNORE_CASE), "M.E")
@@ -401,14 +404,15 @@ class DocumentExtractor(private val context: Context) {
                         .replace(Regex("\\s*\\-\\s*[^\\-]*$"), "") // Remove "- Platform" suffixes
                         .replace(Regex("\\s*\\|\\s*[^|]*$"), "") // Remove "| Platform" suffixes
                         .replace(Regex("\\s*\\(.*?\\)\\s*"), "") // Remove any remaining parentheses
+                        .replace(Regex("\\s*\\b(basic|intermediate|advanced|beginner|expert)\\b.*", RegexOption.IGNORE_CASE), "") // Remove skill levels
+                        .replace(Regex("\\s*\\b(hackerrank|leetcode|coursera|udemy|edx|platform|certificate|certification)\\b.*", RegexOption.IGNORE_CASE), "") // Remove platforms
                         .trim()
                 }
                 .filter { line -> 
                     line.length > 2 && 
                     !line.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) &&
                     line.contains(Regex("[a-zA-Z]{2,}")) &&
-                    !line.lowercase().matches(Regex(".*(basic|intermediate|advanced|beginner|expert).*")) && // Remove skill level indicators
-                    !line.lowercase().matches(Regex(".*(hackerrank|leetcode|coursera|udemy|edx|platform).*")) // Remove platform names
+                    !line.lowercase().matches(Regex(".*(basic|intermediate|advanced|beginner|expert|hackerrank|leetcode|coursera|udemy|edx|platform|certificate|certification).*"))
                 }
                 .distinct() // Remove duplicates
                 .joinToString(", ") // Join with commas for better readability
@@ -479,62 +483,71 @@ class DocumentExtractor(private val context: Context) {
             if (content.isEmpty()) return content
             
             val originalLength = content.length
-            val cleaned = content
-                // Remove escape characters and control characters
-                .replace(Regex("[\\x00-\\x1F\\x7F]"), "")
+            
+            // Step 1: Remove all non-printable characters and stray Unicode symbols
+            val step1 = content
+                .replace(Regex("[\\x00-\\x1F\\x7F-\\x9F]"), "") // Remove control characters and extended ASCII
+                .replace(Regex("[\\u2000-\\u206F]"), "") // Remove general punctuation
+                .replace(Regex("[\\u2070-\\u209F]"), "") // Remove superscripts and subscripts
+                .replace(Regex("[\\u20A0-\\u20CF]"), "") // Remove currency symbols
+                .replace(Regex("[\\u2100-\\u214F]"), "") // Remove letterlike symbols
+                .replace(Regex("[\\u2190-\\u21FF]"), "") // Remove arrows
+                .replace(Regex("[\\u2200-\\u22FF]"), "") // Remove mathematical operators
+                .replace(Regex("[\\u2300-\\u23FF]"), "") // Remove miscellaneous technical
+                .replace(Regex("[\\u2400-\\u243F]"), "") // Remove control pictures
+                .replace(Regex("[\\u2440-\\u245F]"), "") // Remove optical character recognition
+            
+            // Step 2: Remove specific escape sequences and artifacts
+            val step2 = step1
                 .replace("\\e", "")
-                .replace("/E", "") // Remove /E artifacts
+                .replace("/E", "")
                 .replace("\\n", "\n")
                 .replace("\\t", "\t")
                 .replace("\\r", "")
-                
-                // Remove common OCR artifacts and meaningless patterns
-                .replace(Regex("\\blang\\b"), "") // Remove "lang" words
-                .replace(Regex("\\b\\d{1,2}\\b(?![0-9]{2,})"), "") // Remove single/double digits that aren't years
-                .replace(Regex("^\\s*[\\d\\s]+$"), "") // Remove lines that are only numbers and spaces
-                .replace(Regex("[/\\\\][A-Za-z]"), "") // Remove /E, /A, \B, etc. patterns
+                .replace(Regex("\\blang\\b"), "") // Remove standalone "lang"
+                .replace(Regex("\\b\\d{1,2}\\b(?![0-9]{2,})"), "") // Remove single/double digits not part of years
+                .replace(Regex("[/\\\\][A-Za-z]"), "") // Remove /E, /A, \B patterns
                 .replace(Regex("[\\^\\`\\~]"), "") // Remove caret, backtick, tilde
-                .replace(Regex("\\b[A-Z]{1,2}\\b(?![A-Z]{3,})"), "") // Remove single/double letter words like "E", "A", "B"
-                
-                // Remove bullet points and control symbols
                 .replace(Regex("•"), "") // Remove bullet dots
-                .replace(Regex("[\\[\\]{}|~`]"), "")
-                .replace(Regex("\\s+"), " ") // Replace multiple spaces with single space
-                
-                // Remove garbled text patterns and unwanted symbols
+                .replace(Regex("[\\[\\]{}|~`]"), "") // Remove brackets and pipes
                 .replace(Regex("[?]{2,}"), "") // Remove multiple question marks
-                .replace(Regex("[^\\w\\s\\-\\.,;:!()@\\+]"), " ") // Keep only meaningful characters
-                .replace(Regex("\\s+"), " ") // Normalize spaces again
-                
-                // Remove lines that are too short or meaningless
+            
+            // Step 3: Normalize to only allowed characters (letters, digits, spaces, commas, periods, dashes, parentheses)
+            val step3 = step2
+                .replace(Regex("[^A-Za-z0-9\\s,\\.\\-\\(\\)]"), " ") // Keep only allowed characters
+                .replace(Regex("\\s+"), " ") // Replace multiple spaces with single space
+                .trim()
+            
+            // Step 4: Clean and filter lines
+            val step4 = step3
                 .split("\n")
+                .map { line -> cleanLine(line) }
                 .filter { line ->
                     val trimmed = line.trim()
                     trimmed.length > 3 && // At least 4 characters
                     !trimmed.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) && // Not just punctuation/numbers
                     !trimmed.matches(Regex("^\\s*[a-z]\\s*$")) && // Not single letters
-                    !trimmed.lowercase().matches(Regex("^(page|section|chapter)\\s*\\d*$")) && // Not page/section markers
+                    !trimmed.lowercase().matches(Regex("^(page|section|chapter)\\s*\\d*$")) && // Not page markers
                     !trimmed.matches(Regex("^\\s*[\\-_=]{3,}\\s*$")) && // Not separator lines
                     !trimmed.matches(Regex("^[?\\s]+$")) && // Not just question marks and spaces
                     !trimmed.matches(Regex("^[^a-zA-Z]*$")) && // Must contain at least one letter
                     trimmed.contains(Regex("[a-zA-Z]{3,}")) // Must contain meaningful words
                 }
-                .map { line -> cleanLine(line) } // Clean each line individually
                 .filter { it.isNotEmpty() } // Remove empty lines
                 .joinToString("\n")
                 .trim()
             
-            Log.d("DocumentExtractor", "Content cleaned: $originalLength -> ${cleaned.length} characters")
-            return cleaned
+            Log.d("DocumentExtractor", "Content cleaned: $originalLength -> ${step4.length} characters")
+            return step4
         }
     
         private fun cleanLine(line: String): String {
             return line
-                .replace(Regex("[\\x00-\\x1F\\x7F]"), "") // Remove control characters
+                .replace(Regex("[\\x00-\\x1F\\x7F-\\x9F]"), "") // Remove control characters
+                .replace(Regex("[\\u2000-\\u206F]"), "") // Remove general punctuation
                 .replace(Regex("[?]{2,}"), "") // Remove multiple question marks
-                .replace(Regex("[^\\w\\s\\-\\.,;:!()@\\+]"), " ") // Keep only meaningful characters
+                .replace(Regex("[^A-Za-z0-9\\s,\\.\\-\\(\\)]"), " ") // Keep only allowed characters
                 .replace(Regex("\\s+"), " ") // Normalize whitespace
-                .replace(Regex("^\\s*[\\d\\s\\-\\.,;:!?()]+$"), "") // Remove lines with only punctuation
                 .trim()
         }
 }
