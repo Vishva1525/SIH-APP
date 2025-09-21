@@ -203,7 +203,15 @@ fun AuthScreen(navController: NavController) {
         // Continue with Google button
         Button(
             onClick = { 
-                handleGoogleSignIn(context, navController)
+                // For development: Show a helpful message and fallback to email
+                Toast.makeText(
+                    context, 
+                    "Google Sign-In requires proper configuration. Please use email login for now.", 
+                    Toast.LENGTH_LONG
+                ).show()
+                
+                // Uncomment the line below when Google Sign-In is properly configured
+                // handleGoogleSignIn(context, navController, googleSignInLauncher)
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -215,7 +223,7 @@ fun AuthScreen(navController: NavController) {
             )
         ) {
             Text(
-                text = "🔍 Continue with Google",
+                text = "🔍 Continue with Google (Coming Soon)",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.SemiBold
                 ),
@@ -372,7 +380,8 @@ fun AuthScreen(navController: NavController) {
 
 private fun handleGoogleSignIn(
     context: android.content.Context,
-    @Suppress("UNUSED_PARAMETER") navController: androidx.navigation.NavController
+    @Suppress("UNUSED_PARAMETER") navController: androidx.navigation.NavController,
+    launcher: androidx.activity.result.ActivityResultLauncher<android.content.Intent>
 ) {
     try {
         // Configure Google Sign-In
@@ -384,8 +393,8 @@ private fun handleGoogleSignIn(
         val googleSignInClient = GoogleSignIn.getClient(context, gso)
         val signInIntent = googleSignInClient.signInIntent
         
-        // Launch Google Sign-In activity
-        context.startActivity(signInIntent)
+        // Launch Google Sign-In activity using the launcher
+        launcher.launch(signInIntent)
         
         Log.d("GOOGLE_SIGNIN", "Google Sign-In initiated")
         
@@ -461,11 +470,11 @@ fun handleGoogleSignInResult(
             Log.e("GOOGLE_SIGNIN", "SignIn failed: statusCode=${e.statusCode}, message=${e.message}", e)
             
             val errorMessage = when (e.statusCode) {
-                10 -> "Developer error - Check Google Console configuration (statusCode: ${e.statusCode})"
-                12501 -> "Sign-in cancelled by user (statusCode: ${e.statusCode})"
-                7 -> "Network error - Check internet connection (statusCode: ${e.statusCode})"
-                8 -> "Internal error - Try again (statusCode: ${e.statusCode})"
-                else -> "Sign-in error: ${e.message} (statusCode: ${e.statusCode})"
+                10 -> "Google Sign-In not configured - Please use email login instead"
+                12501 -> "Sign-in cancelled by user"
+                7 -> "Network error - Check internet connection"
+                8 -> "Internal error - Try again"
+                else -> "Sign-in error: ${e.message}"
             }
             
             Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()

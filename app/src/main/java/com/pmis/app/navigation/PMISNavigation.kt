@@ -8,11 +8,15 @@ import com.pmis.app.data.AppState
 import com.pmis.app.screens.AboutScreen
 import com.pmis.app.screens.AuthScreen
 import com.pmis.app.screens.ContactScreen
+import com.pmis.app.screens.DashboardScreen
 import com.pmis.app.screens.EmployersScreen
+import com.pmis.app.screens.EnhancedRecommendationsScreen
 import com.pmis.app.screens.GuidelinesScreen
 import com.pmis.app.screens.HomeScreen
-import com.pmis.app.screens.InternScreen
+import com.pmis.app.screens.InternRegistrationScreen
 import com.pmis.app.screens.MainScreen
+import com.pmis.app.screens.NotificationsScreen
+import com.pmis.app.screens.ProjectManagementScreen
 import com.pmis.app.screens.RecommendationScreen
 import com.pmis.app.screens.RecommendationsScreen
 import com.pmis.app.screens.RegisterScreen
@@ -47,11 +51,23 @@ fun PMISNavigation() {
         
         // New hamburger menu screens
         composable("home") {
-            HomeScreen()
+            HomeScreen(
+                onNavigateToScreen = { route ->
+                    navController.navigate(route)
+                }
+            )
+        }
+        
+        composable("dashboard") {
+            DashboardScreen(
+                onNavigateToScreen = { route ->
+                    navController.navigate(route)
+                }
+            )
         }
         
         composable("intern") {
-            InternScreen(navController = navController)
+            InternRegistrationScreen(navController = navController)
         }
         
         composable("recommendation") {
@@ -59,7 +75,7 @@ fun PMISNavigation() {
         }
         
         composable("ml_recommendations") {
-            RecommendationsScreen(
+            EnhancedRecommendationsScreen(
                 internFormState = AppState.internFormData,
                 onBackClick = {
                     navController.popBackStack()
@@ -90,6 +106,22 @@ fun PMISNavigation() {
         
         composable("contact") {
             ContactScreen()
+        }
+        
+        composable("notifications") {
+            NotificationsScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        
+        composable("project_management") {
+            ProjectManagementScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
         }
     }
 }

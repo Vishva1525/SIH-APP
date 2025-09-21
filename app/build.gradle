@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'com.google.gms.google-services'
 }
 
 android {
@@ -42,6 +43,7 @@ android {
     packaging {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
+            excludes += '/META-INF/DEPENDENCIES'
         }
     }
 }
@@ -59,6 +61,7 @@ dependencies {
     implementation 'androidx.compose.ui:ui-graphics'
     implementation 'androidx.compose.ui:ui-tooling-preview'
     implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
     
     // Navigation and Layout
     implementation 'androidx.navigation:navigation-compose:2.7.6'
@@ -70,6 +73,9 @@ dependencies {
     // File handling and document processing
     implementation 'androidx.activity:activity-compose:1.8.2'
     implementation 'androidx.documentfile:documentfile:1.0.1'
+    
+    // PDF text extraction
+    implementation 'org.apache.pdfbox:pdfbox:2.0.29'
     
     // Google Sign-In (for Supabase integration)
     implementation 'com.google.android.gms:play-services-auth:20.5.0'

@@ -5,8 +5,9 @@ import android.net.Uri
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.pdfbox.text.PDFTextStripper
+import java.io.InputStream
 
 data class ExtractedResumeData(
     val education: String,
@@ -16,538 +17,330 @@ data class ExtractedResumeData(
 
 class DocumentExtractor(private val context: Context) {
     
+    /**
+     * ULTIMATE CRASH-PROOF resume extraction
+     * This function will NEVER crash the app under any circumstances
+     */
     suspend fun extractFromUri(uri: Uri): ExtractedResumeData = withContext(Dispatchers.IO) {
         try {
-            val content = readTextFromUri(uri)
-            parseResumeContent(content)
+            Log.d("DocumentExtractor", "Starting ULTIMATE CRASH-PROOF extraction from URI: $uri")
+            
+            // Step 1: Extract text with maximum safety
+            val rawText = extractTextWithMaximumSafety(uri)
+            
+            // Step 2: Clean text thoroughly
+            val cleanedText = cleanTextThoroughly(rawText)
+            
+            // Step 3: Parse sections with fallbacks
+            val result = parseSectionsWithFallbacks(cleanedText)
+            
+            Log.d("DocumentExtractor", "Extraction completed successfully")
+            result
+            
         } catch (e: Exception) {
+            Log.e("DocumentExtractor", "CRITICAL ERROR in extractFromUri", e)
+            // ULTIMATE FALLBACK - NEVER crash
             ExtractedResumeData(
-                education = "Error extracting education: ${e.message}",
-                skills = "Error extracting skills: ${e.message}",
-                experience = "Error extracting experience: ${e.message}"
+                education = "",
+                skills = "",
+                experience = ""
             )
         }
     }
     
-    private fun readTextFromUri(uri: Uri): String {
+    /**
+     * Extract text with maximum safety - handles all possible errors
+     */
+    private fun extractTextWithMaximumSafety(uri: Uri): String {
+        var inputStream: InputStream? = null
+        var document: PDDocument? = null
+        
         return try {
-            val inputStream = context.contentResolver.openInputStream(uri)
-            val reader = BufferedReader(InputStreamReader(inputStream))
-            val stringBuilder = StringBuilder()
-            var line: String?
+            Log.d("DocumentExtractor", "Starting text extraction with maximum safety...")
             
-            while (reader.readLine().also { line = it } != null) {
-                stringBuilder.append(line).append("\n")
+            // Step 1: Validate URI
+            if (uri.toString().isEmpty()) {
+                Log.w("DocumentExtractor", "Empty URI provided")
+                return "INVALID_URI"
             }
             
-            reader.close()
-            inputStream?.close()
-            stringBuilder.toString()
+            // Step 2: Open input stream safely
+            inputStream = try {
+                context.contentResolver.openInputStream(uri)
+            } catch (e: Exception) {
+                Log.e("DocumentExtractor", "Error opening input stream", e)
+                return "STREAM_ERROR"
+            }
+            
+            if (inputStream == null) {
+                Log.w("DocumentExtractor", "Input stream is null")
+                return "NULL_STREAM"
+            }
+            
+            // Step 3: Load PDF safely
+            document = try {
+                PDDocument.load(inputStream)
+            } catch (e: Exception) {
+                Log.e("DocumentExtractor", "Error loading PDF - might be scanned or corrupted", e)
+                return "SCANNED_PDF"
+            }
+            
+            // Step 4: Validate document
+            if (document?.numberOfPages ?: 0 <= 0) {
+                Log.w("DocumentExtractor", "PDF has no pages")
+                return "EMPTY_PDF"
+            }
+            
+            Log.d("DocumentExtractor", "PDF loaded successfully, pages: ${document?.numberOfPages}")
+            
+            // Step 5: Extract text safely
+            val textStripper = PDFTextStripper().apply {
+                setSortByPosition(true)
+                setStartPage(1)
+                setEndPage(document?.numberOfPages ?: 1)
+            }
+            
+            val extractedText = try {
+                document?.let { textStripper.getText(it) } ?: "EXTRACTION_FAILED"
+            } catch (e: Exception) {
+                Log.e("DocumentExtractor", "Error extracting text", e)
+                return "EXTRACTION_FAILED"
+            }
+            
+            Log.d("DocumentExtractor", "Text extracted successfully, length: ${extractedText.length}")
+            extractedText
+            
         } catch (e: Exception) {
-            "Error reading file: ${e.message}"
-        }
-    }
-    
-        private fun parseResumeContent(content: String): ExtractedResumeData {
-            val lines = content.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
-            
-            val education = extractEducationDetails(lines)
-            val skills = extractSkillsDetails(lines)
-            val experience = extractExperienceDetails(lines)
-            
-            // Final safeguard: If a field is empty after cleaning, leave it blank for user to fill manually
-            return ExtractedResumeData(
-                education = if (education.isBlank() || education.length < 5) "" else education,
-                skills = if (skills.isBlank() || skills.length < 3) "" else skills,
-                experience = if (experience.isBlank() || experience.length < 10) "" else experience
-            )
-        }
-    
-    private fun extractSection(lines: List<String>, keywords: List<String>): String {
-        val result = StringBuilder()
-        var inSection = false
-        var sectionDepth = 0
-        
-        for (line in lines) {
-            val cleanLineText = cleanLine(line)
-            if (cleanLineText.isEmpty()) continue
-            
-            val lowerLine = cleanLineText.lowercase()
-            
-            // Check if this line starts a new section
-            val startsNewSection = keywords.any { keyword ->
-                lowerLine.contains(keyword) || lowerLine.startsWith(keyword)
+            Log.e("DocumentExtractor", "Critical error in extractTextWithMaximumSafety", e)
+            "CRITICAL_ERROR"
+        } finally {
+            // ALWAYS clean up resources
+            try {
+                document?.close()
+            } catch (e: Exception) {
+                Log.w("DocumentExtractor", "Error closing document", e)
             }
-            
-            if (startsNewSection) {
-                inSection = true
-                sectionDepth = 0
-                // Don't include the section header itself
-                continue
-            }
-            
-            // If we're in a section, collect content
-            if (inSection) {
-                // Check if this might be the start of a different section
-                val isOtherSection = cleanLineText.isNotEmpty() && 
-                    !cleanLineText.startsWith(" ") && 
-                    !cleanLineText.startsWith("-") && 
-                    !cleanLineText.startsWith("•") &&
-                    !cleanLineText.matches(Regex(".*\\d{4}.*")) && // Not a date
-                    !cleanLineText.matches(Regex(".*@.*")) && // Not an email
-                    !cleanLineText.matches(Regex(".*\\d{10}.*")) && // Not a phone number
-                    isNewMajorSection(cleanLineText) // Check for new major sections
-                
-                if (isOtherSection && sectionDepth > 2) {
-                    // Probably a new section, stop here
-                    break
-                }
-                
-                // Only add meaningful content
-                if (isMeaningfulContent(cleanLineText)) {
-                    result.append("$cleanLineText\n")
-                    sectionDepth++
-                }
-                
-                // Stop after collecting reasonable amount of content
-                if (sectionDepth > 15) {
-                    break
-                }
+            try {
+                inputStream?.close()
+            } catch (e: Exception) {
+                Log.w("DocumentExtractor", "Error closing input stream", e)
             }
         }
-        
-        return result.toString().trim()
     }
     
-        private fun isMeaningfulContent(line: String): Boolean {
-            val trimmed = line.trim()
-            return trimmed.length > 4 && // At least 5 characters
-                   !trimmed.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) && // Not just punctuation/numbers
-                   !trimmed.matches(Regex("^\\s*[a-z]\\s*$")) && // Not single letters
-                   !trimmed.matches(Regex("^\\s*[A-Z]{1,2}\\s*$")) && // Not single/double uppercase letters like "E", "A"
-                   !trimmed.matches(Regex("^\\s*[/\\\\][A-Za-z]\\s*$")) && // Not /E, /A, \B patterns
-                   !trimmed.lowercase().matches(Regex("^(page|section|chapter|footer|header)\\s*\\d*$")) && // Not page markers
-                   !trimmed.matches(Regex("^\\s*[\\-_=]{3,}\\s*$")) && // Not separator lines
-                   !trimmed.matches(Regex("^\\s*\\d+\\s*$")) && // Not just numbers
-                   !trimmed.matches(Regex("^\\s*[\\^\\`\\~]\\s*$")) && // Not single special chars
-                   !trimmed.matches(Regex("^[?\\s]+$")) && // Not just question marks and spaces
-                   !trimmed.matches(Regex("^[^a-zA-Z]*$")) && // Must contain at least one letter
-                   trimmed.contains(Regex("[a-zA-Z]{3,}")) && // Must contain meaningful words (3+ letters)
-                   !trimmed.contains(Regex("[?]{3,}")) // Not lines with many question marks
-        }
-    
-    private fun extractEducationDetails(lines: List<String>): String {
-        val educationKeywords = listOf("education", "academic", "qualification", "degree", "university", "college", "school")
-        val degreeKeywords = listOf("b.tech", "btech", "bachelor", "master", "mtech", "m.tech", "phd", "diploma", "bsc", "msc", "ba", "ma", "bca", "mca", "be", "me", "b.e", "m.e")
-        val institutionKeywords = listOf("university", "college", "institute", "school", "iit", "nit", "iiit", "svce")
-        
-        val educationEntries = mutableListOf<EducationEntry>()
-        var inEducationSection = false
-        
-        for (i in lines.indices) {
-            val line = lines[i]
-            val cleanLineText = cleanLine(line)
-            if (cleanLineText.isEmpty()) continue
+    /**
+     * Clean text thoroughly - remove all junk and artifacts
+     */
+    private fun cleanTextThoroughly(text: String): String {
+        return try {
+            Log.d("DocumentExtractor", "Starting thorough text cleaning...")
             
-            val lowerLine = cleanLineText.lowercase()
+            var cleaned = text
             
-            // Check if we're entering education section
-            if (educationKeywords.any { keyword -> lowerLine.contains(keyword) && lowerLine.length < 50 }) {
-                inEducationSection = true
-                continue
-            }
+            // Remove PDF object markers and junk
+            cleaned = cleaned.replace(Regex("endobj|objype|tructElem|obj\\s+\\d+\\s+\\d+"), " ")
             
-            // Check if we're leaving education section (new major section)
-            if (inEducationSection && isNewMajorSection(cleanLineText)) {
-                break
-            }
+            // Remove PDF-specific tokens
+            cleaned = cleaned.replace(Regex("BT\\s+ET|Tj\\s*$|TJ\\s*$|\\b\\d+\\s+\\d+\\s+obj\\b"), " ")
             
-            if (inEducationSection) {
-                // Only process meaningful content
-                if (!isMeaningfulContent(cleanLineText)) continue
-                
-                // Skip lines that contain CGPA, participation, or publications (belong in Experience/Projects)
-                if (containsNonEducationContent(cleanLineText)) continue
-                
-                // Try to extract education information from this line
-                val extractedEntry = parseEducationLine(cleanLineText)
-                if (extractedEntry != null) {
-                    educationEntries.add(extractedEntry)
-                } else {
-                    // Try to extract from common patterns
-                    val entry = extractEducationFromPatterns(cleanLineText, degreeKeywords, institutionKeywords)
-                    if (entry != null) {
-                        educationEntries.add(entry)
-                    }
-                }
-            }
-        }
-        
-        // Sort by year (most recent first)
-        val sortedEntries = educationEntries.sortedByDescending { it.getYearInt() }
-        
-        // Format the education entries with proper formatting
-        val result = formatEducationEntries(sortedEntries)
-        Log.d("DocumentExtractor", "Extracted education entries: ${educationEntries.size}")
-        Log.d("DocumentExtractor", "Formatted education result: $result")
-        return result
-    }
-    
-    private fun extractEducationFromPatterns(line: String, degreeKeywords: List<String>, institutionKeywords: List<String>): EducationEntry? {
-        val lowerLine = line.lowercase()
-        
-        // Pattern 1: "Bachelor of Engineering at Sri Venkateswara College of Engineering"
-        val atPattern = Regex("([a-zA-Z.\\s]+(?:engineering|technology|science|arts|commerce|management|computer|information|electronics|mechanical|civil|electrical))\\s+at\\s+([a-zA-Z\\s]+)", RegexOption.IGNORE_CASE)
-        val atMatch = atPattern.find(line)
-        if (atMatch != null) {
-            val degree = atMatch.groupValues[1].trim()
-            val institution = atMatch.groupValues[2].trim()
-            return EducationEntry(degree, institution, "")
-        }
-        
-        // Pattern 2: Look for degree keywords followed by institution
-        for (degreeKeyword in degreeKeywords) {
-            if (lowerLine.contains(degreeKeyword)) {
-                // Try to extract institution
-                val institution = extractInstitutionFromLine(line, institutionKeywords)
-                if (institution.isNotEmpty()) {
-                    return EducationEntry(degreeKeyword.uppercase(), institution, "")
-                }
-            }
-        }
-        
-        // Pattern 3: Look for institution keywords
-        for (institutionKeyword in institutionKeywords) {
-            if (lowerLine.contains(institutionKeyword)) {
-                // Try to extract degree
-                val degree = extractDegreeFromLine(line, degreeKeywords)
-                if (degree.isNotEmpty()) {
-                    return EducationEntry(degree, line.trim(), "")
-                }
-            }
-        }
-        
-        return null
-    }
-    
-    private fun extractSkillsDetails(lines: List<String>): String {
-        val skillsKeywords = listOf("skills", "technical skills", "programming", "languages", "technologies", "tools", "competencies", "expertise", "technical")
-        val rawSkills = extractSection(lines, skillsKeywords)
-        return cleanAndFormatSkills(rawSkills)
-    }
-    
-    private fun extractExperienceDetails(lines: List<String>): String {
-        val experienceKeywords = listOf("experience", "work experience", "employment", "career", "job", "professional", "internship", "projects and research")
-        val rawExperience = extractSection(lines, experienceKeywords)
-        return cleanAndFormatExperience(rawExperience)
-    }
-    
-    private fun parseEducationLine(line: String): EducationEntry? {
-        // Pattern: "B.Tech in CSE, SVCE" or "Bachelor of Technology, XYZ University, 2020"
-        val patterns = listOf(
-            Regex("([a-zA-Z.\\s]+)\\s+in\\s+([a-zA-Z\\s]+),\\s*([a-zA-Z\\s]+)(?:,\\s*(\\d{4}))?"),
-            Regex("([a-zA-Z.\\s]+),\\s*([a-zA-Z\\s]+)(?:,\\s*(\\d{4}))?"),
-            Regex("(\\d{4})\\s*-?\\s*(\\d{4})?\\s+([a-zA-Z.\\s]+)\\s*,?\\s*([a-zA-Z\\s]+)")
-        )
-        
-        for (pattern in patterns) {
-            val match = pattern.find(line)
-            if (match != null) {
-                val groups = match.groupValues
-                return when (groups.size) {
-                    5 -> EducationEntry(
-                        degree = cleanLine(groups[1].trim()),
-                        institution = cleanLine(groups[3].trim()),
-                        year = groups[4].ifEmpty { "" }
-                    )
-                    4 -> EducationEntry(
-                        degree = cleanLine(groups[1].trim()),
-                        institution = cleanLine(groups[2].trim()),
-                        year = groups[3].ifEmpty { "" }
-                    )
-                    else -> null
-                }
-            }
-        }
-        
-        return null
-    }
-    
-    private fun extractDegreeFromLine(line: String, degreeKeywords: List<String>): String {
-        val lowerLine = line.lowercase()
-        for (keyword in degreeKeywords) {
-            if (lowerLine.contains(keyword)) {
-                // Extract the degree part
-                val parts = line.split(",", "-", "•", "–")
-                for (part in parts) {
-                    if (part.lowercase().contains(keyword)) {
-                        return cleanLine(part.trim())
-                    }
-                }
-            }
-        }
-        return ""
-    }
-    
-    private fun extractInstitutionFromLine(line: String, institutionKeywords: List<String>): String {
-        val lowerLine = line.lowercase()
-        
-        // Look for institution keywords or common patterns
-        if (institutionKeywords.any { lowerLine.contains(it) } || 
-            lowerLine.matches(Regex(".*[a-z]+\\s+(university|college|institute|school).*"))) {
+            // Remove non-printable characters and control characters
+            cleaned = cleaned.replace(Regex("[\\x00-\\x1F\\x7F-\\x9F\\uFEFF]"), " ")
             
-            val parts = line.split(",", "-", "•", "–")
-            for (part in parts) {
-                val partLower = part.lowercase()
-                if (institutionKeywords.any { partLower.contains(it) } ||
-                    partLower.matches(Regex(".*[a-z]+\\s+(university|college|institute|school).*"))) {
-                    return cleanLine(part.trim())
-                }
-            }
-        }
-        
-        return ""
-    }
-    
-    private fun extractYearFromLine(line: String): String? {
-        val yearPattern = Regex("(19|20)\\d{2}")
-        val match = yearPattern.find(line)
-        return match?.value
-    }
-    
-    private fun isNewMajorSection(line: String): Boolean {
-        val majorSections = listOf("experience", "skills", "projects", "certifications", "achievements", "contact", "objective")
-        val lowerLine = line.lowercase()
-        return majorSections.any { section -> 
-            lowerLine == section || (lowerLine.contains(section) && line.length < 30)
-        }
-    }
-    
-    private fun formatEducationEntries(entries: List<EducationEntry>): String {
-        if (entries.isEmpty()) return ""
-        
-        return entries.joinToString("\n") { entry ->
-            val parts = mutableListOf<String>()
+            // Remove corrupted characters and unicode artifacts
+            cleaned = cleaned.replace(Regex("[\\uFFFD\\uFFFE\\uFFFF]"), " ")
             
-            // Format: Institution – Degree in Specialization (Year)
-            if (entry.institution.isNotEmpty()) {
-                parts.add(entry.institution)
-            }
+            // Remove excessive whitespace
+            cleaned = cleaned.replace(Regex("\\s+"), " ")
             
-            if (entry.degree.isNotEmpty()) {
-                // Clean and format degree
-                val cleanDegree = cleanAndFormatDegree(entry.degree)
-                parts.add(cleanDegree)
-            }
+            // Remove leading/trailing whitespace
+            cleaned = cleaned.trim()
             
-            if (entry.year.isNotEmpty()) {
-                parts.add("(${entry.year})")
-            }
-            
-            parts.joinToString(" – ")
-        }
-    }
-    
-    private fun containsNonEducationContent(line: String): Boolean {
-        val lowerLine = line.lowercase()
-        val nonEducationKeywords = listOf(
-            "cgpa", "gpa", "percentage", "%", "marks", "grade",
-            "participated", "participation", "published", "publication", "research",
-            "paper", "conference", "journal", "hackathon", "competition",
-            "won", "winner", "award", "certificate", "certification",
-            "project", "internship", "experience", "worked", "developed"
-        )
-        return nonEducationKeywords.any { keyword -> lowerLine.contains(keyword) }
-    }
-    
-    private fun cleanAndFormatDegree(degree: String): String {
-        return degree
-            .replace(Regex("\\(.*?\\)"), "") // Remove parentheses content
-            .replace(Regex("\\s+"), " ") // Normalize spaces
-            .replace(Regex("\\bbachelor\\s+of\\s+engineering\\s+in\\s+([a-zA-Z\\s]+)\\b", RegexOption.IGNORE_CASE), "B.E in $1")
-            .replace(Regex("\\bbachelor\\s+of\\s+technology\\s+in\\s+([a-zA-Z\\s]+)\\b", RegexOption.IGNORE_CASE), "B.Tech in $1")
-            .replace(Regex("\\bbachelor\\s+of\\s+engineering\\b", RegexOption.IGNORE_CASE), "B.E")
-            .replace(Regex("\\bbachelor\\s+of\\s+technology\\b", RegexOption.IGNORE_CASE), "B.Tech")
-            .replace(Regex("\\bmaster\\s+of\\s+engineering\\b", RegexOption.IGNORE_CASE), "M.E")
-            .replace(Regex("\\bmaster\\s+of\\s+technology\\b", RegexOption.IGNORE_CASE), "M.Tech")
-            .replace(Regex("\\bbachelor\\b", RegexOption.IGNORE_CASE), "B")
-            .replace(Regex("\\bmaster\\b", RegexOption.IGNORE_CASE), "M")
-            .replace(Regex("\\bin\\s+", RegexOption.IGNORE_CASE), " in ")
-            .trim()
-    }
-    
-    data class EducationEntry(
-        var degree: String,
-        var institution: String,
-        var year: String
-    ) {
-        fun isComplete(): Boolean = degree.isNotEmpty() && institution.isNotEmpty()
-        fun hasContent(): Boolean = degree.isNotEmpty() || institution.isNotEmpty()
-        fun getYearInt(): Int = year.toIntOrNull() ?: 0
-    }
-    
-        
-        private fun cleanAndFormatSkills(skillsContent: String): String {
-            if (skillsContent.isEmpty()) return skillsContent
-            
-            val cleaned = cleanContent(skillsContent)
-            
-            return cleaned
-                .split("\n")
-                .map { line -> 
-                    line.trim()
-                        .replace(Regex("\\s+"), " ") // Normalize spaces
-                        .replace(Regex("^[\\-\\*\\+]\\s*"), "") // Remove bullet points
-                        .replace(Regex("^\\d+\\.\\s*"), "") // Remove numbered lists
-                        .replace(Regex("\\([^)]*\\)"), "") // Remove parentheses content like "(Basic)"
-                        .replace(Regex("\\s*–\\s*[^–]*$"), "") // Remove "– Platform" suffixes like "– HackerRank"
-                        .replace(Regex("\\s*\\-\\s*[^\\-]*$"), "") // Remove "- Platform" suffixes
-                        .replace(Regex("\\s*\\|\\s*[^|]*$"), "") // Remove "| Platform" suffixes
-                        .replace(Regex("\\s*\\(.*?\\)\\s*"), "") // Remove any remaining parentheses
-                        .replace(Regex("\\s*\\b(basic|intermediate|advanced|beginner|expert)\\b.*", RegexOption.IGNORE_CASE), "") // Remove skill levels
-                        .replace(Regex("\\s*\\b(hackerrank|leetcode|coursera|udemy|edx|platform|certificate|certification)\\b.*", RegexOption.IGNORE_CASE), "") // Remove platforms
-                        .trim()
-                }
+            // Remove lines that are just numbers, symbols, or junk
+            cleaned = cleaned.lines()
                 .filter { line -> 
-                    line.length > 2 && 
-                    !line.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) &&
-                    line.contains(Regex("[a-zA-Z]{2,}")) &&
-                    !line.lowercase().matches(Regex(".*(basic|intermediate|advanced|beginner|expert|hackerrank|leetcode|coursera|udemy|edx|platform|certificate|certification).*"))
-                }
-                .distinct() // Remove duplicates
-                .joinToString(", ") // Join with commas for better readability
-                .trim()
-        }
-        
-        private fun cleanAndFormatExperience(experienceContent: String): String {
-            if (experienceContent.isEmpty()) return experienceContent
-            
-            val cleaned = cleanContent(experienceContent)
-            
-            return cleaned
-                .split("\n")
-                .map { line -> 
-                    line.trim()
-                        .replace(Regex("\\s+"), " ") // Normalize spaces
-                        .replace(Regex("^[\\-\\*\\+]\\s*"), "") // Remove bullet points
-                        .replace(Regex("^\\d+\\.\\s*"), "") // Remove numbered lists
-                        .trim()
-                }
-                .filter { line -> 
-                    line.length > 10 && // Experience entries should be longer
-                    !line.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) &&
-                    line.contains(Regex("[a-zA-Z]{3,}")) &&
-                    !line.lowercase().matches(Regex("^(page|section|chapter)\\s*\\d*$")) && // Remove page markers
-                    (line.lowercase().contains("intern") || 
-                     line.lowercase().contains("experience") || 
-                     line.lowercase().contains("work") || 
-                     line.lowercase().contains("project") ||
-                     line.lowercase().contains("research") ||
-                     line.contains("–") || line.contains("-")) // Must look like a job/project entry
-                }
-                .map { line -> formatExperienceLine(line) } // Format each experience line
-                .distinct() // Remove duplicates
-                .joinToString("\n") // Keep as separate lines for experience entries
-                .trim()
-        }
-        
-        private fun formatExperienceLine(line: String): String {
-            // Try to format: "Computer Vision Intern - Clustrex Data Private Limited (Jan 2025 - Feb 2025)"
-            val internPattern = Regex("([a-zA-Z\\s]+intern)\\s*[-–]\\s*([a-zA-Z\\s]+)(?:\\(([^)]+)\\))?", RegexOption.IGNORE_CASE)
-            val internMatch = internPattern.find(line)
-            if (internMatch != null) {
-                val position = internMatch.groupValues[1].trim()
-                val company = internMatch.groupValues[2].trim()
-                val dates = internMatch.groupValues[3].trim()
-                return if (dates.isNotEmpty()) {
-                    "$position – $company ($dates)"
-                } else {
-                    "$position – $company"
-                }
-            }
-            
-            // Try to format: "AGRIHUB: Revolutionizing Indian Agriculture Using Machine Learning"
-            val projectPattern = Regex("([a-zA-Z0-9\\s]+):\\s*(.+)", RegexOption.IGNORE_CASE)
-            val projectMatch = projectPattern.find(line)
-            if (projectMatch != null) {
-                val projectName = projectMatch.groupValues[1].trim()
-                val description = projectMatch.groupValues[2].trim()
-                return "$projectName: $description"
-            }
-            
-            // Default: return cleaned line
-            return line.trim()
-        }
-
-        private fun cleanContent(content: String): String {
-            if (content.isEmpty()) return content
-            
-            val originalLength = content.length
-            
-            // Step 1: Remove all non-printable characters and stray Unicode symbols
-            val step1 = content
-                .replace(Regex("[\\x00-\\x1F\\x7F-\\x9F]"), "") // Remove control characters and extended ASCII
-                .replace(Regex("[\\u2000-\\u206F]"), "") // Remove general punctuation
-                .replace(Regex("[\\u2070-\\u209F]"), "") // Remove superscripts and subscripts
-                .replace(Regex("[\\u20A0-\\u20CF]"), "") // Remove currency symbols
-                .replace(Regex("[\\u2100-\\u214F]"), "") // Remove letterlike symbols
-                .replace(Regex("[\\u2190-\\u21FF]"), "") // Remove arrows
-                .replace(Regex("[\\u2200-\\u22FF]"), "") // Remove mathematical operators
-                .replace(Regex("[\\u2300-\\u23FF]"), "") // Remove miscellaneous technical
-                .replace(Regex("[\\u2400-\\u243F]"), "") // Remove control pictures
-                .replace(Regex("[\\u2440-\\u245F]"), "") // Remove optical character recognition
-            
-            // Step 2: Remove specific escape sequences and artifacts
-            val step2 = step1
-                .replace("\\e", "")
-                .replace("/E", "")
-                .replace("\\n", "\n")
-                .replace("\\t", "\t")
-                .replace("\\r", "")
-                .replace(Regex("\\blang\\b"), "") // Remove standalone "lang"
-                .replace(Regex("\\b\\d{1,2}\\b(?![0-9]{2,})"), "") // Remove single/double digits not part of years
-                .replace(Regex("[/\\\\][A-Za-z]"), "") // Remove /E, /A, \B patterns
-                .replace(Regex("[\\^\\`\\~]"), "") // Remove caret, backtick, tilde
-                .replace(Regex("•"), "") // Remove bullet dots
-                .replace(Regex("[\\[\\]{}|~`]"), "") // Remove brackets and pipes
-                .replace(Regex("[?]{2,}"), "") // Remove multiple question marks
-            
-            // Step 3: Normalize to only allowed characters (letters, digits, spaces, commas, periods, dashes, parentheses)
-            val step3 = step2
-                .replace(Regex("[^A-Za-z0-9\\s,\\.\\-\\(\\)]"), " ") // Keep only allowed characters
-                .replace(Regex("\\s+"), " ") // Replace multiple spaces with single space
-                .trim()
-            
-            // Step 4: Clean and filter lines
-            val step4 = step3
-                .split("\n")
-                .map { line -> cleanLine(line) }
-                .filter { line ->
                     val trimmed = line.trim()
-                    trimmed.length > 3 && // At least 4 characters
-                    !trimmed.matches(Regex("^[\\d\\s\\-\\.,;:!?()]+$")) && // Not just punctuation/numbers
-                    !trimmed.matches(Regex("^\\s*[a-z]\\s*$")) && // Not single letters
-                    !trimmed.lowercase().matches(Regex("^(page|section|chapter)\\s*\\d*$")) && // Not page markers
-                    !trimmed.matches(Regex("^\\s*[\\-_=]{3,}\\s*$")) && // Not separator lines
-                    !trimmed.matches(Regex("^[?\\s]+$")) && // Not just question marks and spaces
-                    !trimmed.matches(Regex("^[^a-zA-Z]*$")) && // Must contain at least one letter
-                    trimmed.contains(Regex("[a-zA-Z]{3,}")) // Must contain meaningful words
+                    trimmed.isNotEmpty() && 
+                    !trimmed.matches(Regex("^\\d+$")) &&
+                    !trimmed.matches(Regex("^[\\s\\-_=]+$")) &&
+                    !trimmed.matches(Regex("^[\\x00-\\x1F\\x7F-\\x9F]+$")) &&
+                    trimmed.length > 2 &&
+                    !trimmed.contains("endobj") &&
+                    !trimmed.contains("objype") &&
+                    !trimmed.contains("tructElem")
                 }
-                .filter { it.isNotEmpty() } // Remove empty lines
                 .joinToString("\n")
-                .trim()
             
-            Log.d("DocumentExtractor", "Content cleaned: $originalLength -> ${step4.length} characters")
-            return step4
+            Log.d("DocumentExtractor", "Text cleaning completed, final length: ${cleaned.length}")
+            cleaned
+            
+        } catch (e: Exception) {
+            Log.e("DocumentExtractor", "Error cleaning text", e)
+            text // Return original text if cleaning fails
         }
+    }
     
-        private fun cleanLine(line: String): String {
-            return line
-                .replace(Regex("[\\x00-\\x1F\\x7F-\\x9F]"), "") // Remove control characters
-                .replace(Regex("[\\u2000-\\u206F]"), "") // Remove general punctuation
-                .replace(Regex("[?]{2,}"), "") // Remove multiple question marks
-                .replace(Regex("[^A-Za-z0-9\\s,\\.\\-\\(\\)]"), " ") // Keep only allowed characters
-                .replace(Regex("\\s+"), " ") // Normalize whitespace
-                .trim()
+    /**
+     * Parse sections with comprehensive fallbacks
+     */
+    private fun parseSectionsWithFallbacks(text: String): ExtractedResumeData {
+        return try {
+            Log.d("DocumentExtractor", "Starting section parsing with fallbacks...")
+            
+            // Check if text is readable
+            if (text.isEmpty() || text.length < 10) {
+                Log.w("DocumentExtractor", "Text is too short or empty")
+                return ExtractedResumeData("", "", "")
+            }
+            
+            // Check for scanned PDF indicators
+            if (isScannedPDF(text)) {
+                Log.w("DocumentExtractor", "Scanned PDF detected")
+                return ExtractedResumeData("", "", "")
+            }
+            
+            val education = extractEducationSafely(text)
+            val skills = extractSkillsSafely(text)
+            val experience = extractExperienceSafely(text)
+            
+            ExtractedResumeData(
+                education = education,
+                skills = skills,
+                experience = experience
+            )
+            
+        } catch (e: Exception) {
+            Log.e("DocumentExtractor", "Error parsing sections", e)
+            ExtractedResumeData("", "", "")
         }
+    }
+    
+    /**
+     * Check if PDF is scanned (image-only)
+     */
+    private fun isScannedPDF(text: String): Boolean {
+        return try {
+            val cleanText = text.replace(Regex("\\s+"), " ").trim()
+            cleanText.length < 50 || 
+            cleanText.matches(Regex("^[\\s\\d\\-_=]+$")) ||
+            cleanText.contains("endobj") && cleanText.length < 100
+        } catch (e: Exception) {
+            Log.e("DocumentExtractor", "Error checking if scanned PDF", e)
+            false
+        }
+    }
+    
+    /**
+     * Extract education section safely
+     */
+    private fun extractEducationSafely(text: String): String {
+        return try {
+            val educationKeywords = listOf(
+                "education", "academic", "degree", "university", "college", "institute",
+                "bachelor", "master", "phd", "diploma", "certificate", "graduation",
+                "btech", "mtech", "bsc", "msc", "ba", "ma", "be", "me", "bca", "mca"
+            )
+            
+            val lines = text.lines()
+            val educationLines = mutableListOf<String>()
+            
+            for (line in lines) {
+                val lowerLine = line.lowercase()
+                if (educationKeywords.any { keyword -> lowerLine.contains(keyword) }) {
+                    val cleanLine = line.trim()
+                    if (cleanLine.isNotEmpty() && cleanLine.length > 5) {
+                        educationLines.add(cleanLine)
+                    }
+                }
+            }
+            
+            if (educationLines.isNotEmpty()) {
+                educationLines.take(3).joinToString("\n")
+            } else {
+                ""
+            }
+            
+        } catch (e: Exception) {
+            Log.e("DocumentExtractor", "Error extracting education", e)
+            ""
+        }
+    }
+    
+    /**
+     * Extract skills section safely
+     */
+    private fun extractSkillsSafely(text: String): String {
+        return try {
+            val commonSkills = listOf(
+                "python", "java", "javascript", "react", "angular", "vue", "node", "express",
+                "sql", "mysql", "postgresql", "mongodb", "redis", "docker", "kubernetes",
+                "aws", "azure", "gcp", "git", "github", "gitlab", "jenkins", "ci/cd",
+                "android", "ios", "flutter", "react native", "kotlin", "swift",
+                "machine learning", "ai", "data science", "analytics", "tableau", "power bi",
+                "html", "css", "bootstrap", "sass", "less", "webpack", "babel",
+                "spring", "django", "flask", "laravel", "rails", "asp.net", "php",
+                "c++", "c#", "go", "rust", "scala", "ruby", "perl", "r", "matlab",
+                "tensorflow", "pytorch", "keras", "pandas", "numpy", "scikit-learn"
+            )
+            
+            val lines = text.lines()
+            val skillLines = mutableListOf<String>()
+            
+            for (line in lines) {
+                val lowerLine = line.lowercase()
+                if (commonSkills.any { skill -> lowerLine.contains(skill) }) {
+                    val cleanLine = line.trim()
+                    if (cleanLine.isNotEmpty() && cleanLine.length > 2) {
+                        skillLines.add(cleanLine)
+                    }
+                }
+            }
+            
+            if (skillLines.isNotEmpty()) {
+                skillLines.take(5).joinToString(", ")
+            } else {
+                ""
+            }
+            
+        } catch (e: Exception) {
+            Log.e("DocumentExtractor", "Error extracting skills", e)
+            ""
+        }
+    }
+    
+    /**
+     * Extract experience section safely
+     */
+    private fun extractExperienceSafely(text: String): String {
+        return try {
+            val experienceKeywords = listOf(
+                "experience", "work", "employment", "career", "professional", "internship",
+                "job", "position", "role", "company", "organization", "employer",
+                "project", "achievement", "responsibility", "duties", "accomplishment",
+                "intern", "trainee", "associate", "developer", "engineer", "analyst"
+            )
+            
+            val lines = text.lines()
+            val experienceLines = mutableListOf<String>()
+            
+            for (line in lines) {
+                val lowerLine = line.lowercase()
+                if (experienceKeywords.any { keyword -> lowerLine.contains(keyword) }) {
+                    val cleanLine = line.trim()
+                    if (cleanLine.isNotEmpty() && cleanLine.length > 10) {
+                        experienceLines.add(cleanLine)
+                    }
+                }
+            }
+            
+            if (experienceLines.isNotEmpty()) {
+                experienceLines.take(3).joinToString("\n")
+            } else {
+                ""
+            }
+            
+        } catch (e: Exception) {
+            Log.e("DocumentExtractor", "Error extracting experience", e)
+            ""
+        }
+    }
 }

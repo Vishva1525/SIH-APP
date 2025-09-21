@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -44,6 +46,7 @@ import com.pmis.app.ui.theme.PMISAppTheme
 import com.pmis.app.ui.theme.PurpleStart
 import com.pmis.app.ui.theme.WhiteColor
 import com.pmis.app.ui.components.HeroSection
+import com.pmis.app.data.AppState
 import kotlinx.coroutines.launch
 
 // Navigation menu items
@@ -64,8 +67,11 @@ fun MainScreen(
     
     val menuItems = listOf(
         DrawerMenuItem("Home", "home", Icons.Default.Home),
+        DrawerMenuItem("Dashboard", "dashboard", Icons.Default.Home),
         DrawerMenuItem("Intern", "intern", Icons.Default.Person),
-        DrawerMenuItem("Recommendation", "recommendation", Icons.Default.Settings)
+        DrawerMenuItem("Recommendation", "recommendation", Icons.Default.Settings),
+        DrawerMenuItem("Projects", "project_management", Icons.Default.Star),
+        DrawerMenuItem("Notifications", "notifications", Icons.Default.Notifications)
     )
 
     ModalNavigationDrawer(
@@ -164,13 +170,36 @@ fun MainScreen(
                 )
             }
         ) { paddingValues ->
-            // Main Content - always show HeroSection as the main screen
+            // Main Content - show different content based on selected item
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                HeroSection()
+                when (selectedItem) {
+                    "home" -> HomeScreen(
+                        onNavigateToScreen = { route ->
+                            onNavigateToScreen(route)
+                        }
+                    )
+                    "dashboard" -> DashboardScreen(
+                        onNavigateToScreen = { route ->
+                            onNavigateToScreen(route)
+                        }
+                    )
+                    "intern" -> InternRegistrationScreen(
+                        onNavigateToScreen = { route ->
+                            onNavigateToScreen(route)
+                        }
+                    )
+                    "recommendation" -> RecommendationsScreen(
+                        internFormState = AppState.internFormData,
+                        onBackClick = { /* Handle back */ }
+                    )
+                    "project_management" -> ProjectManagementScreen()
+                    "notifications" -> NotificationsScreen()
+                    else -> HeroSection()
+                }
             }
         }
     }

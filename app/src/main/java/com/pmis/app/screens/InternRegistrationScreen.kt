@@ -1,6 +1,5 @@
 package com.pmis.app.screens
 
-import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -33,22 +32,22 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.navigation.NavController
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -65,9 +64,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import com.pmis.app.data.AppState
 import android.widget.Toast
+import android.util.Log
 import androidx.compose.ui.platform.LocalContext
 
 import androidx.compose.foundation.layout.size
@@ -137,7 +136,8 @@ class InternFormState {
 
 @Composable
 fun InternRegistrationScreen(
-    navController: NavController? = null
+    navController: NavController? = null,
+    onNavigateToScreen: ((String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val steps = InternStep.values().toList()
@@ -246,7 +246,7 @@ fun InternRegistrationScreen(
                         AppState.updateInternFormData(formState)
                         
                         if (navController != null) {
-                            android.util.Log.d("InternForm", "Navigating to ml_recommendations")
+                            android.util.Log.d("InternForm", "Navigating to ml_recommendations via NavController")
                             try {
                                 navController.navigate("ml_recommendations")
                                 android.util.Log.d("InternForm", "Navigation command sent successfully")
@@ -254,8 +254,17 @@ fun InternRegistrationScreen(
                                 android.util.Log.e("InternForm", "Navigation failed: ${e.message}", e)
                                 Toast.makeText(context, "Navigation failed: ${e.message}", Toast.LENGTH_LONG).show()
                             }
+                        } else if (onNavigateToScreen != null) {
+                            android.util.Log.d("InternForm", "Navigating to ml_recommendations via callback")
+                            try {
+                                onNavigateToScreen("ml_recommendations")
+                                android.util.Log.d("InternForm", "Navigation callback sent successfully")
+                            } catch (e: Exception) {
+                                android.util.Log.e("InternForm", "Navigation callback failed: ${e.message}", e)
+                                Toast.makeText(context, "Navigation failed: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
                         } else {
-                            android.util.Log.e("InternForm", "navController is null! Cannot navigate.")
+                            android.util.Log.e("InternForm", "No navigation method available!")
                             Toast.makeText(context, "Navigation not available", Toast.LENGTH_LONG).show()
                         }
                     }
@@ -382,14 +391,11 @@ private fun BasicInfoStep(state: InternFormState) {
 
 @Composable
 private fun ResumeStep(
-    state: InternFormState,
+    @Suppress("UNUSED_PARAMETER") state: InternFormState,
     onNavigateToStep: (InternStep) -> Unit = {}
 ) {
-    val context = LocalContext.current
-    var isExtracting by remember { mutableStateOf(false) }
-    var uploadStatus by remember { mutableStateOf("") }
-    var showWarning by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
+    val snackbarHostState = remember { SnackbarHostState() }
     
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
@@ -406,143 +412,74 @@ private fun ResumeStep(
             SectionTitle(text = "Resume (optional)", description = "Upload your resume. We'll auto-extract details you can edit.")
             Spacer(modifier = Modifier.height(16.dp))
 
-            var selectedUri by remember { mutableStateOf<Uri?>(null) }
+            // selectedUri variable removed since resume upload is commented out
             
-            // File picker launcher
+            // File picker launcher - COMMENTED OUT
+            /*
             val filePickerLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.GetContent()
             ) { uri ->
-                uri?.let { 
-                    selectedUri = it
-                    state.resumePath = it.toString()
-                    uploadStatus = "Resume uploaded successfully!"
-                    isExtracting = true
-                    showWarning = false // Hide warning when resume is uploaded
-                }
+                // File picker functionality commented out
             }
+            */
             
-            // Handle extraction when a file is selected
+            // RESUME UPLOAD COMMENTED OUT - Manual entry only
+            /*
             LaunchedEffect(selectedUri) {
                 selectedUri?.let { uri ->
-                    try {
-                        val extractor = DocumentExtractor(context)
-                        val extractedContent = extractor.extractFromUri(uri)
-                        state.extractedEducation = extractedContent.education
-                        state.extractedSkills = extractedContent.skills
-                        state.extractedExperience = extractedContent.experience
-                        uploadStatus = "Resume processed! Review and edit the extracted information below."
-                    } catch (e: Exception) {
-                        uploadStatus = "Error processing resume: ${e.message}"
-                    } finally {
-                        isExtracting = false
-                    }
+                    // Resume upload functionality commented out
+                    // User will enter details manually
                 }
             }
+            */
 
-            // Upload section
+            // Upload section - COMMENTED OUT
+            /*
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { 
-                        if (!isExtracting) {
-                            filePickerLauncher.launch("*/*") // Accept all file types
-                        }
+                        // Upload functionality commented out
                     }
             ) {
+                // Upload UI commented out
+            }
+            */
+            
+            // Manual entry message
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (isExtracting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                "Processing resume...", 
-                                color = MaterialTheme.colorScheme.primary, 
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        } else {
-                            Text(
-                                "📁 Click to browse and upload resume", 
-                                color = MaterialTheme.colorScheme.primary, 
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                    
-                    if (uploadStatus.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = uploadStatus,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (uploadStatus.contains("Error")) 
-                                MaterialTheme.colorScheme.error 
-                            else 
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    
-                    if (state.resumePath.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "📄 Resume: ${File(state.resumePath).name}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    Text(
+                        text = "Manual Entry Mode",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Please fill in your education, skills, and experience details manually below.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Warning message for missing resume
+            // Warning message for missing resume - COMMENTED OUT
+            /*
             if (showWarning) {
-                AnimatedVisibility(
-                    visible = showWarning,
-                    enter = fadeIn(animationSpec = tween(300)) + slideInHorizontally(
-                        initialOffsetX = { -it / 2 },
-                        animationSpec = tween(300)
-                    ),
-                    exit = fadeOut(animationSpec = tween(200))
-                ) {
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = androidx.compose.material3.CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "⚠️",
-                                fontSize = 24.sp,
-                                modifier = Modifier.padding(end = 12.dp)
-                            )
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Resume Required",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                                Text(
-                                    text = "Please upload your resume document to proceed to the next section.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
+                // Warning UI commented out
             }
+            */
             
-            // Extracted content section
+            // Extracted content section - COMMENTED OUT
+            /*
             AnimatedVisibility(
                 visible = state.extractedEducation.isNotEmpty() || 
                          state.extractedSkills.isNotEmpty() || 
@@ -553,52 +490,9 @@ private fun ResumeStep(
                 ),
                 exit = fadeOut(animationSpec = tween(300))
             ) {
-                Column {
-                    Text(text = "Extracted info (editable)", fontWeight = FontWeight.SemiBold)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedTextField(
-                            value = state.extractedEducation,
-                            onValueChange = { state.extractedEducation = it },
-                            label = { Text("Education") },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 3,
-                            maxLines = 6,
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Text,
-                                imeAction = ImeAction.Done
-                            )
-                        )
-                        
-                        OutlinedTextField(
-                            value = state.extractedSkills,
-                            onValueChange = { state.extractedSkills = it },
-                            label = { Text("Skills") },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 3,
-                            maxLines = 6,
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Text,
-                                imeAction = ImeAction.Done
-                            )
-                        )
-                        
-                        OutlinedTextField(
-                            value = state.extractedExperience,
-                            onValueChange = { state.extractedExperience = it },
-                            label = { Text("Experience") },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 3,
-                            maxLines = 6,
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Text,
-                                imeAction = ImeAction.Done
-                            )
-                        )
-                    }
-                }
+                // Extracted content UI commented out
             }
+            */
         }
     
         // Sticky navigation buttons at bottom
@@ -659,11 +553,8 @@ private fun ResumeStep(
             ) {
                 Button(
                     onClick = { 
-                        if (state.resumePath.isEmpty()) {
-                            showWarning = true
-                        } else {
-                            onNavigateToStep(InternStep.Skills)
-                        }
+                        // Resume upload is commented out, so always proceed to next step
+                        onNavigateToStep(InternStep.Skills)
                     },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
@@ -682,6 +573,12 @@ private fun ResumeStep(
                 }
             }
         }
+        
+        // Snackbar for user feedback
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
