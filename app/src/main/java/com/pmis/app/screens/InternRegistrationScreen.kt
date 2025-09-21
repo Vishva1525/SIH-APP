@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -64,6 +65,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import com.pmis.app.data.AppState
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.animation.AnimatedVisibility
@@ -101,12 +106,14 @@ private enum class InternStep(val label: String) {
     Consent("Consent")
 }
 
-private class InternFormState {
+class InternFormState {
     // Basic Info
     var fullName: String by mutableStateOf("")
     var verifiedId: String by mutableStateOf("")
     var collegeName: String by mutableStateOf("")
     var yearOfStudy: String by mutableStateOf("")
+    var percentage: String by mutableStateOf("")
+    var location: String by mutableStateOf("")
     // Resume
     var resumePath: String by mutableStateOf("")
     var extractedEducation: String by mutableStateOf("")
@@ -129,7 +136,10 @@ private class InternFormState {
 }
 
 @Composable
-fun InternRegistrationScreen() {
+fun InternRegistrationScreen(
+    navController: NavController? = null
+) {
+    val context = LocalContext.current
     val steps = InternStep.values().toList()
     var currentStep by rememberSaveable { mutableStateOf(InternStep.BasicInfo.ordinal) }
     val formState = remember { InternFormState() }
@@ -209,22 +219,56 @@ fun InternRegistrationScreen() {
                 InternStep.Skills -> formState.skills.isNotEmpty()
                 InternStep.Preferences -> formState.prefLocation.isNotBlank() && formState.prefDuration.isNotBlank() && formState.prefWorkload.isNotBlank()
                 InternStep.Fairness -> formState.fairnessBackground.isNotBlank() && formState.preferredLanguage.isNotBlank()
-                InternStep.Consent -> formState.preferredChannel.isNotBlank() && formState.consentAllowed
+                InternStep.Consent -> {
+                    val channelValid = formState.preferredChannel.isNotBlank()
+                    val consentValid = formState.consentAllowed
+                    android.util.Log.d("InternForm", "Consent validation - channelValid: $channelValid, consentValid: $consentValid, preferredChannel: '${formState.preferredChannel}'")
+                    channelValid && consentValid
+                }
             }
 
             Button(
                 onClick = {
+                    // Show toast to verify click is working
+                    Toast.makeText(context, "Button clicked! Step: $currentStep", Toast.LENGTH_SHORT).show()
+                    
+                    android.util.Log.d("InternForm", "Button clicked - currentStep: $currentStep, lastIndex: ${steps.lastIndex}, isValid: $isValid")
+                    android.util.Log.d("InternForm", "navController: $navController")
+                    android.util.Log.d("InternForm", "formState - fullName: ${formState.fullName}, consentAllowed: ${formState.consentAllowed}, preferredChannel: ${formState.preferredChannel}")
+                    
                     if (currentStep < steps.lastIndex) {
                         currentStep += 1
                     } else {
-                        // Final submit - here you can integrate submission
+                        // Final submit - save form data and navigate to ML recommendations
+                        Toast.makeText(context, "Getting AI Recommendations...", Toast.LENGTH_LONG).show()
+                        
+                        android.util.Log.d("InternForm", "Saving form data and navigating to ML recommendations")
+                        AppState.updateInternFormData(formState)
+                        
+                        if (navController != null) {
+                            android.util.Log.d("InternForm", "Navigating to ml_recommendations")
+                            try {
+                                navController.navigate("ml_recommendations")
+                                android.util.Log.d("InternForm", "Navigation command sent successfully")
+                            } catch (e: Exception) {
+                                android.util.Log.e("InternForm", "Navigation failed: ${e.message}", e)
+                                Toast.makeText(context, "Navigation failed: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
+                        } else {
+                            android.util.Log.e("InternForm", "navController is null! Cannot navigate.")
+                            Toast.makeText(context, "Navigation not available", Toast.LENGTH_LONG).show()
+                        }
                     }
                 },
                 enabled = isValid
             ) {
-                Text(if (currentStep == steps.lastIndex) "Activate My Smart Recommendations 🚀" else "Next")
+                Text(if (currentStep == steps.lastIndex) "Get AI Recommendations 🚀" else "Next")
                 Spacer(modifier = Modifier.width(8.dp))
+                if (currentStep == steps.lastIndex) {
+                    Icon(Icons.Default.Star, contentDescription = null)
+                } else {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                }
             }
         }
     }

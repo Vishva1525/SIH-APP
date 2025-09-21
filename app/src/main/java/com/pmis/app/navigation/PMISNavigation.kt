@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.pmis.app.data.AppState
 import com.pmis.app.screens.AboutScreen
 import com.pmis.app.screens.AuthScreen
 import com.pmis.app.screens.ContactScreen
@@ -13,6 +14,7 @@ import com.pmis.app.screens.HomeScreen
 import com.pmis.app.screens.InternScreen
 import com.pmis.app.screens.MainScreen
 import com.pmis.app.screens.RecommendationScreen
+import com.pmis.app.screens.RecommendationsScreen
 import com.pmis.app.screens.RegisterScreen
 import com.pmis.app.screens.StudentsScreen
 import com.pmis.app.screens.WelcomeScreen
@@ -49,11 +51,20 @@ fun PMISNavigation() {
         }
         
         composable("intern") {
-            InternScreen()
+            InternScreen(navController = navController)
         }
         
         composable("recommendation") {
             RecommendationScreen()
+        }
+        
+        composable("ml_recommendations") {
+            RecommendationsScreen(
+                internFormState = AppState.internFormData,
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
         }
         
         // Original navigation drawer screens (kept for compatibility)
