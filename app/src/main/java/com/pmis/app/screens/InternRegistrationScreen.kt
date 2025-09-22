@@ -808,6 +808,21 @@ private fun ResumeStep(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Manual button
+                    OutlinedButton(
+                        onClick = { onNavigateToStep(InternStep.BasicInfo) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text(
+                            text = "Fill Details Manually",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }

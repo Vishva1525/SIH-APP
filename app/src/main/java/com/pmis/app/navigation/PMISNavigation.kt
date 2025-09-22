@@ -19,6 +19,7 @@ import com.pmis.app.screens.EnhancedRecommendationsScreen
 import com.pmis.app.screens.GuidelinesScreen
 import com.pmis.app.screens.HomeScreen
 import com.pmis.app.screens.InternRegistrationScreen
+import com.pmis.app.screens.InternStep
 import com.pmis.app.screens.LoginScreen
 import com.pmis.app.screens.MainScreen
 import com.pmis.app.screens.NotificationsScreen
@@ -94,7 +95,8 @@ fun PMISNavigation(authManager: AuthenticationManager) {
         composable("intern_registration") {
             InternRegistrationScreen(
                 navController = navController,
-                authManager = authManager
+                authManager = authManager,
+                startStep = InternStep.Resume
             )
         }
         
