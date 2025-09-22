@@ -6,6 +6,8 @@ val PurpleStart = Color(0xFFFF6600)   // orange primary (replacing purple)
 val PurpleEnd   = Color(0xFFFFB366)   // lighter orange gradient
 val CTAOrange   = Color(0xFFFF6B35)   // vibrant orange for buttons
 val VibrantOrange = Color(0xFFFF6B35) // vibrant orange for primary actions
+val DeepOrange = Color(0xFFFF6F00)    // deep orange for gradient start
+val Amber = Color(0xFFFFA000)         // amber for gradient end
 val WhiteColor  = Color(0xFFFFFDF5)   // cream white
 
 // Additional theme colors

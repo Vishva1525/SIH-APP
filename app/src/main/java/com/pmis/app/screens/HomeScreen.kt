@@ -31,6 +31,8 @@ import com.pmis.app.ui.theme.PurpleStart
 import com.pmis.app.ui.theme.PurpleEnd
 import com.pmis.app.ui.theme.CTAOrange
 import com.pmis.app.ui.theme.VibrantOrange
+import com.pmis.app.ui.theme.DeepOrange
+import com.pmis.app.ui.theme.Amber
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
@@ -162,30 +164,45 @@ private fun HeroSection(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Single CTA below the image and title
+                // Get Started button with gradient background
                 Button(
                     onClick = { onNavigateToScreen("intern") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = VibrantOrange,
+                        containerColor = Color.Transparent,
                         contentColor = Color.White
                     ),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(12.dp),
                     elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 8.dp,
-                        pressedElevation = 12.dp
+                        defaultElevation = 6.dp,
+                        pressedElevation = 10.dp
                     )
                 ) {
-                    Text(
-                        text = "Get Started",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        ),
-                        color = Color.White
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        DeepOrange,
+                                        Amber
+                                    )
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Get Started",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            ),
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }
