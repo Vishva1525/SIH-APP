@@ -151,8 +151,7 @@ fun DashboardScreen(
             item {
                 StatsSection(
                     summary = summary,
-                    onActiveApplicationsClick = { safeNavigate("ml_recommendations") },
-                    onRecommendationsClick = { safeNavigate("ml_recommendations") }
+                    onActiveApplicationsClick = { safeNavigate("ml_recommendations") }
                 )
             }
             
@@ -227,8 +226,7 @@ private fun DashboardHeader() {
 @Composable
 private fun StatsSection(
     summary: DashboardSummary,
-    onActiveApplicationsClick: () -> Unit = {},
-    onRecommendationsClick: () -> Unit = {}
+    onActiveApplicationsClick: () -> Unit = {}
 ) {
     val stats = listOf(
         DashboardStat(
@@ -237,13 +235,6 @@ private fun StatsSection(
             icon = Icons.AutoMirrored.Filled.List,
             color = PurpleStart,
             trend = "+2 this week"
-        ),
-        DashboardStat(
-            title = "Recommendations",
-            value = summary.recommendationsCount.toString(),
-            icon = Icons.Default.Star,
-            color = CTAOrange,
-            trend = "New matches"
         ),
         DashboardStat(
             title = "Profile Views",
@@ -270,7 +261,6 @@ private fun StatsSection(
                 stat = stat,
                 onClick = when (stat.title) {
                     "Active Applications" -> onActiveApplicationsClick
-                    "Recommendations" -> onRecommendationsClick
                     else -> { -> }
                 }
             )

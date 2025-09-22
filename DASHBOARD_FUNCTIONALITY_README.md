@@ -17,11 +17,9 @@ The Dashboard has been fully implemented with all tappable UI elements wired to 
   - Shows dynamic count from API
   - Displays trend badge ("+2 this week")
   
-- **Recommendations Card**:
-  - Clickable with `cardRecommendations` ID  
-  - Navigates to ML Recommendations screen
-  - Shows dynamic count from API
-  - Displays "New matches" badge
+- **Recommendations Card**: 
+  - **REMOVED** - No longer displayed on dashboard
+  - Functionality moved to Quick Actions "Get Recommendations" tile
 
 - **Profile Views Card**:
   - Shows dynamic view count
@@ -230,7 +228,7 @@ viewModel.refreshApplications()
 | Back Button | `btnBack` | Navigate back |
 | Notifications | `btnNotifications` | Open notifications |
 | Active Applications Card | `cardActiveApplications` | View applications |
-| Recommendations Card | `cardRecommendations` | View recommendations |
+| ~~Recommendations Card~~ | ~~`cardRecommendations`~~ | **REMOVED** |
 | Find Internships | `quickFind` | Search internships |
 | Get Recommendations | `quickRecommend` | Get AI recommendations |
 | Update Profile | `quickProfile` | Edit profile |
