@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="32"
+    android:viewportHeight="32">
+    
+    <!-- Dashboard icon -->
+    <!-- Grid squares -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M4,4 L12,4 L12,12 L4,12 Z" />
+    
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M16,4 L24,4 L24,12 L16,12 Z" />
+    
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M4,16 L12,16 L12,24 L4,24 Z" />
+    
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M16,16 L24,16 L24,24 L16,24 Z" />
+    
+    <!-- Center circle -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M20,16 C22.2,16 24,17.8 24,20 C24,22.2 22.2,24 20,24 C17.8,24 16,22.2 16,20 C16,17.8 17.8,16 20,16 Z" />
+    
+    <!-- Chart bars -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M28,8 L30,8 L30,24 L28,24 Z" />
+    
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M26,12 L28,12 L28,24 L26,24 Z" />
+</vector>

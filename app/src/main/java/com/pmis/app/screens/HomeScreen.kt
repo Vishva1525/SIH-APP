@@ -152,14 +152,16 @@ private fun HeroSection() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Title
+                // Title - Centered
                 Text(
                     text = "PM Internship Scheme",
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 28.sp
                     ),
-                    color = Color.White
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
             }

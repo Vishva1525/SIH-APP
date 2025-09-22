@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+    android:height="28dp"
+    android:viewportWidth="80"
+    android:viewportHeight="28">
+    
+    <!-- MCA Logo - Simple text representation -->
+    <!-- M -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M4,4 L4,28 L8,28 L8,16 L16,16 L16,28 L20,28 L20,4 L16,4 L16,12 L8,12 L8,4 Z" />
+    
+    <!-- C -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M24,4 L28,4 C30.2,4 32,5.8 32,8 L32,28 C32,30.2 30.2,32 28,32 L24,32 Z" />
+    
+    <!-- A -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M40,4 L44,4 L48,20 L52,20 L56,4 L60,4 L60,28 L56,28 L56,12 L52,12 L48,28 L44,28 L44,12 L40,12 L40,28 L36,28 L36,4 Z" />
+    
+    <!-- Government emblem -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M70,10 C73.3,10 76,12.7 76,16 C76,19.3 73.3,22 70,22 C66.7,22 64,19.3 64,16 C64,12.7 66.7,10 70,10 Z" />
+    
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M70,12 L72,16 L76,16 L73,19 L74,23 L70,21 L66,23 L67,19 L64,16 L68,16 Z" />
+</vector>
