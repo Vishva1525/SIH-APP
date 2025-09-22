@@ -118,7 +118,7 @@ private fun HeroSection(
                 )
                 .padding(24.dp)
         ) {
-            val images = remember { listOf(R.drawable.hero, R.drawable.hero2, R.drawable.hero3) }
+            val images = remember { listOf(R.drawable.hero, R.drawable.hero3) }
             var currentIndex by remember { mutableStateOf(0) }
             LaunchedEffect(Unit) {
                 while (true) {

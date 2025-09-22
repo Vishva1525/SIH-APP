@@ -49,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.collectAsState
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
@@ -74,6 +75,7 @@ import com.pmis.app.data.AppState
 import android.widget.Toast
 import android.util.Log
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.SnackbarDuration
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.animation.AnimatedVisibility
@@ -714,11 +716,52 @@ private fun AcademicBackgroundStep(state: InternFormState) {
 
 @Composable
 private fun ResumeStep(
-    @Suppress("UNUSED_PARAMETER") state: InternFormState,
+    state: InternFormState,
     onNavigateToStep: (InternStep) -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val resumeUploadViewModel = remember { com.pmis.app.viewmodel.ResumeUploadViewModel() }
+    
+    val uiState by resumeUploadViewModel.uiState.collectAsState()
+    
+    // Handle extracted data
+    LaunchedEffect(uiState.extractedData) {
+        uiState.extractedData?.let { extractedData ->
+            // Map extracted data to form state
+            extractedData.fullName.takeIf { it.isNotEmpty() }?.let { state.fullName = it }
+            extractedData.email.takeIf { it.isNotEmpty() }?.let { state.email = it }
+            extractedData.phoneNumber.takeIf { it.isNotEmpty() }?.let { state.phoneNumber = it }
+            extractedData.currentLocation.takeIf { it.isNotEmpty() }?.let { state.currentLocation = it }
+            extractedData.collegeName.takeIf { it.isNotEmpty() }?.let { state.collegeName = it }
+            extractedData.degree.takeIf { it.isNotEmpty() }?.let { state.stream = it }
+            extractedData.graduationYear.takeIf { it.isNotEmpty() }?.let { 
+                // Map graduation year to year of study
+                val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                val gradYear = extractedData.graduationYear.toIntOrNull() ?: currentYear
+                val yearDiff = gradYear - currentYear
+                state.yearOfStudy = when {
+                    yearDiff <= -4 -> "Graduated"
+                    yearDiff == -3 -> "4th Year"
+                    yearDiff == -2 -> "3rd Year"
+                    yearDiff == -1 -> "2nd Year"
+                    yearDiff == 0 -> "1st Year"
+                    else -> "1st Year"
+                }
+            }
+            extractedData.cgpa.takeIf { it.isNotEmpty() }?.let { state.cgpa = it }
+            extractedData.technicalSkills.takeIf { it.isNotEmpty() }?.let { skills ->
+                state.technicalSkills.clear()
+                state.technicalSkills.addAll(skills)
+            }
+            
+            // Show success message
+            snackbarHostState.showSnackbar(
+                message = "Resume data extracted and filled successfully!",
+                duration = SnackbarDuration.Long
+            )
+        }
+    }
     
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
@@ -732,90 +775,41 @@ private fun ResumeStep(
                 .verticalScroll(scrollState)
                 .padding(bottom = 80.dp) // Space for sticky buttons
         ) {
-            SectionTitle(text = "Resume (optional)", description = "Upload your resume. We'll auto-extract details you can edit.")
+            SectionTitle(text = "Resume Upload", description = "Upload your resume to automatically fill your profile details.")
             Spacer(modifier = Modifier.height(16.dp))
 
-            // selectedUri variable removed since resume upload is commented out
-            
-            // File picker launcher - COMMENTED OUT
-            /*
-            val filePickerLauncher = rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.GetContent()
-            ) { uri ->
-                // File picker functionality commented out
-            }
-            */
-            
-            // RESUME UPLOAD COMMENTED OUT - Manual entry only
-            /*
-            LaunchedEffect(selectedUri) {
-                selectedUri?.let { uri ->
-                    // Resume upload functionality commented out
-                    // User will enter details manually
+            // Resume Upload Component
+            com.pmis.app.ui.components.ResumeUploadComponent(
+                viewModel = resumeUploadViewModel,
+                onDataExtracted = { extractedData ->
+                    // Data is already handled in LaunchedEffect above
                 }
-            }
-            */
+            )
 
-            // Upload section - COMMENTED OUT
-            /*
-            ElevatedCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { 
-                        // Upload functionality commented out
-                    }
-            ) {
-                // Upload UI commented out
-            }
-            */
+            Spacer(modifier = Modifier.height(20.dp))
             
-            // Manual entry message
+            // Manual entry option
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Manual Entry Mode",
+                        text = "Or Fill Manually",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Please fill in your education, skills, and experience details manually below.",
+                        text = "You can skip resume upload and fill in your details manually in the following steps.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Warning message for missing resume - COMMENTED OUT
-            /*
-            if (showWarning) {
-                // Warning UI commented out
-            }
-            */
-            
-            // Extracted content section - COMMENTED OUT
-            /*
-            AnimatedVisibility(
-                visible = state.extractedEducation.isNotEmpty() || 
-                         state.extractedSkills.isNotEmpty() || 
-                         state.extractedExperience.isNotEmpty(),
-                enter = fadeIn(animationSpec = tween(300)) + slideInHorizontally(
-                    initialOffsetX = { it / 3 },
-                    animationSpec = tween(300)
-                ),
-                exit = fadeOut(animationSpec = tween(300))
-            ) {
-                // Extracted content UI commented out
-            }
-            */
         }
     
         // Sticky navigation buttons at bottom
@@ -876,8 +870,7 @@ private fun ResumeStep(
             ) {
                 Button(
                     onClick = { 
-                        // Resume upload is commented out, so always proceed to next step
-                        onNavigateToStep(InternStep.Skills)
+                        onNavigateToStep(InternStep.BasicInfo)
                     },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
