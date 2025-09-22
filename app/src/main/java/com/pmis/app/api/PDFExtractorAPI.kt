@@ -124,7 +124,11 @@ class PDFExtractorAPI(private val context: Context) {
             //   }
             // }
             
+            // Log the response for debugging
+            Log.d("PDFExtractorAPI", "Parsing JSON response: $jsonResponse")
+            
             // For now, return a mock response - replace with actual JSON parsing
+            // TODO: Implement actual JSON parsing based on your API response format
             ExtractedResumeData(
                 name = "Extracted Name",
                 email = "extracted@email.com",

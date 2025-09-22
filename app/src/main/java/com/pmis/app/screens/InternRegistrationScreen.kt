@@ -781,7 +781,7 @@ private fun ResumeStep(
             // Resume Upload Component
             com.pmis.app.ui.components.ResumeUploadComponent(
                 viewModel = resumeUploadViewModel,
-                onDataExtracted = { extractedData ->
+                onDataExtracted = { _ ->
                     // Data is already handled in LaunchedEffect above
                 }
             )
