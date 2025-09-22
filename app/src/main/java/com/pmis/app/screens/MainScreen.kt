@@ -185,6 +185,9 @@ fun MainScreen(
                     "dashboard" -> DashboardScreen(
                         onNavigateToScreen = { route ->
                             onNavigateToScreen(route)
+                        },
+                        onBackClick = {
+                            selectedItem = "home"
                         }
                     )
                     "intern" -> InternRegistrationScreen(

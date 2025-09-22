@@ -112,7 +112,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.heightIn
 
-private enum class InternStep(val label: String) {
+enum class InternStep(val label: String) {
     Resume("Resume or Manual"),
     BasicInfo("Basic Info"),
     AcademicBackground("Academic Background"),

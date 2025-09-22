@@ -59,15 +59,6 @@ fun PMISNavigation(authManager: AuthenticationManager) {
                         else -> route
                     }
                     navController.navigate(mapped)
-                },
-                onLogout = {
-                    // Clear auth and go to welcome
-                    CoroutineScope(Dispatchers.Main).launch {
-                        authManager.signOut()
-                    }
-                    navController.navigate("welcome") {
-                        popUpTo("main") { inclusive = true }
-                    }
                 }
             )
         }
@@ -93,6 +84,9 @@ fun PMISNavigation(authManager: AuthenticationManager) {
                         else -> route
                     }
                     navController.navigate(mapped)
+                },
+                onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }

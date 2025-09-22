@@ -11,7 +11,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.Alignment
@@ -55,40 +57,66 @@ enum class ActivityType {
     INTERNSHIP, RECOMMENDATION, APPLICATION, UPDATE
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
-    onNavigateToScreen: (String) -> Unit = {}
+    onNavigateToScreen: (String) -> Unit = {},
+    onBackClick: () -> Unit = {}
 ) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Header Section
-        item {
-            DashboardHeader()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Dashboard",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { onBackClick() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )
         }
-        
-        // Stats Cards
-        item {
-            StatsSection()
-        }
-        
-        // Quick Actions
-        item {
-            QuickActionsSection(onNavigateToScreen = onNavigateToScreen)
-        }
-        
-        // Recent Activity
-        item {
-            RecentActivitySection()
-        }
-        
-        // Progress Overview
-        item {
-            ProgressOverviewSection()
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(paddingValues),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header Section
+            item {
+                DashboardHeader()
+            }
+            
+            // Stats Cards
+            item {
+                StatsSection()
+            }
+            
+            // Quick Actions
+            item {
+                QuickActionsSection(onNavigateToScreen = onNavigateToScreen)
+            }
+            
+            // Recent Activity
+            item {
+                RecentActivitySection()
+            }
+            
+            // Progress Overview
+            item {
+                ProgressOverviewSection()
+            }
         }
     }
 }
