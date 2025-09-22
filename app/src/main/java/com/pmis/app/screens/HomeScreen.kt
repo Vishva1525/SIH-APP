@@ -3,6 +3,7 @@ package com.pmis.app.screens
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,6 +30,14 @@ import com.pmis.app.ui.theme.PMISAppTheme
 import com.pmis.app.ui.theme.PurpleStart
 import com.pmis.app.ui.theme.PurpleEnd
 import com.pmis.app.ui.theme.CTAOrange
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
+import androidx.compose.animation.Crossfade
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.pmis.app.R
 
 data class FeatureCard(
     val title: String,
@@ -108,11 +117,24 @@ private fun HeroSection(
                 )
                 .padding(24.dp)
         ) {
-            Column(
+            val images = remember { listOf(R.drawable.hero, R.drawable.hero2, R.drawable.hero3) }
+            var currentIndex by remember { mutableStateOf(0) }
+            LaunchedEffect(Unit) {
+                while (true) {
+                    delay(3000)
+                    currentIndex = (currentIndex + 1) % images.size
+                }
+            }
+
+            Row(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
                     Text(
                         text = "PM Internship Scheme",
                         style = MaterialTheme.typography.headlineLarge.copy(
@@ -127,38 +149,59 @@ private fun HeroSection(
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White.copy(alpha = 0.9f)
                     )
-                }
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = { onNavigateToScreen("intern") },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = PurpleStart
-                        ),
-                        shape = RoundedCornerShape(12.dp)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(
-                            text = "Get Started",
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Button(
+                            onClick = { onNavigateToScreen("intern") },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.White,
+                                contentColor = PurpleStart
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = "Get Started",
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        
+                        OutlinedButton(
+                            onClick = { onNavigateToScreen("ml_recommendations") },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color.White
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White)
+                        ) {
+                            Text(
+                                text = "Learn More",
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
-                    
-                    OutlinedButton(
-                        onClick = { onNavigateToScreen("ml_recommendations") },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color.White
-                        ),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White)
-                    ) {
-                        Text(
-                            text = "Learn More",
-                            fontWeight = FontWeight.SemiBold
+                }
+
+                Box(
+                    modifier = Modifier
+                        .width(180.dp)
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(CTAOrange)
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Crossfade(targetState = currentIndex, animationSpec = tween(700)) { idx ->
+                        Image(
+                            painter = painterResource(id = images[idx]),
+                            contentDescription = "Hero visual",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
                         )
                     }
                 }
