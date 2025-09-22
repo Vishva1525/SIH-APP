@@ -1,6 +1,7 @@
 package com.pmis.app.ui.components
 
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -52,11 +53,20 @@ fun ResumeUploadComponent(
         }
     }
     
-    // File picker launcher
+    // File picker launcher with PDF-only filter and persistable permissions
     val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
+            // Grant persistable URI permission
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (e: Exception) {
+                Log.w("ResumeUploadComponent", "Could not take persistable URI permission", e)
+            }
             viewModel.uploadAndExtractResume(it)
         }
     }
@@ -97,7 +107,7 @@ fun ResumeUploadComponent(
             
             // Upload Button
             UploadButton(
-                onClick = { filePickerLauncher.launch("application/pdf") },
+                onClick = { filePickerLauncher.launch(arrayOf("application/pdf")) },
                 isLoading = uiState.isLoading,
                 modifier = Modifier.fillMaxWidth()
             )
