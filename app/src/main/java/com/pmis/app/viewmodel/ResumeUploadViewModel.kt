@@ -35,7 +35,7 @@ class ResumeUploadViewModel : ViewModel() {
     }
     
     fun uploadAndExtractResume(uri: Uri) {
-        if (!::documentExtractor.isInitialized) {
+        if (!::documentExtractor.isInitialized || !::context.isInitialized) {
             _uiState.value = _uiState.value.copy(
                 isError = true,
                 errorMessage = "Document extractor not initialized"
@@ -55,9 +55,15 @@ class ResumeUploadViewModel : ViewModel() {
             try {
                 Log.d("ResumeUploadViewModel", "Starting resume extraction from URI: $uri")
                 
-                // Validate file type first
-                val mimeType = context.contentResolver.getType(uri)
-                if (mimeType != "application/pdf") {
+                // Validate file type first - with error handling
+                val mimeType = try {
+                    context.contentResolver.getType(uri)
+                } catch (e: Exception) {
+                    Log.w("ResumeUploadViewModel", "Could not get MIME type", e)
+                    null
+                }
+                
+                if (mimeType != null && mimeType != "application/pdf") {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         isError = true,
