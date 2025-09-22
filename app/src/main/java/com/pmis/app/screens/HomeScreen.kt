@@ -166,15 +166,16 @@ private fun HeroSection(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Get Started button matching reference image
+                // Get Started button - clearly visible
                 Button(
                     onClick = { onNavigateToScreen("intern") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                        .height(56.dp)
+                        .padding(horizontal = 16.dp)
                         .semantics { contentDescription = "Get Started" },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Transparent,
+                        containerColor = Color(0xFFFF6F00), // Solid orange
                         contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(16.dp),
@@ -183,30 +184,15 @@ private fun HeroSection(
                         pressedElevation = 12.dp
                     )
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                brush = Brush.horizontalGradient(
-                                    colors = listOf(
-                                        Color(0xFFFF6F00), // Deep orange start
-                                        Color(0xFFFFA000)  // Amber end
-                                    )
-                                ),
-                                shape = RoundedCornerShape(16.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Get Started",
-                            style = MaterialTheme.typography.headlineSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp
-                            ),
-                            color = Color.White,
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                    Text(
+                        text = "Get Started",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        ),
+                        color = Color.White,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }
