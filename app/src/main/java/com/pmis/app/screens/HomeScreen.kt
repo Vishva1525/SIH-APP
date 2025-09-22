@@ -26,6 +26,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.pmis.app.ui.theme.PMISAppTheme
 import com.pmis.app.ui.theme.PurpleStart
 import com.pmis.app.ui.theme.PurpleEnd
@@ -164,14 +166,15 @@ private fun HeroSection(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Get Started Now button with solid orange background
+                // Get Started button matching reference image
                 Button(
                     onClick = { onNavigateToScreen("intern") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                        .semantics { contentDescription = "Get Started" },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = DeepOrange,
+                        containerColor = Color.Transparent,
                         contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(16.dp),
@@ -180,15 +183,30 @@ private fun HeroSection(
                         pressedElevation = 12.dp
                     )
                 ) {
-                    Text(
-                        text = "Get Started Now",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        ),
-                        color = Color.White,
-                        textAlign = TextAlign.Center
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color(0xFFFF6F00), // Deep orange start
+                                        Color(0xFFFFA000)  // Amber end
+                                    )
+                                ),
+                                shape = RoundedCornerShape(16.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Get Started",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp
+                            ),
+                            color = Color.White,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         }
