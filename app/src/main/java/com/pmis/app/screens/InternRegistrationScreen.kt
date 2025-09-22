@@ -729,11 +729,11 @@ private fun ResumeStep(
     LaunchedEffect(uiState.extractedData) {
         uiState.extractedData?.let { extractedData ->
             // Map extracted data to form state
-            extractedData.fullName.takeIf { it.isNotEmpty() }?.let { state.fullName = it }
+            extractedData.name.takeIf { it.isNotEmpty() }?.let { state.fullName = it }
             extractedData.email.takeIf { it.isNotEmpty() }?.let { state.email = it }
             extractedData.phoneNumber.takeIf { it.isNotEmpty() }?.let { state.phoneNumber = it }
-            extractedData.currentLocation.takeIf { it.isNotEmpty() }?.let { state.currentLocation = it }
-            extractedData.collegeName.takeIf { it.isNotEmpty() }?.let { state.collegeName = it }
+            extractedData.location.takeIf { it.isNotEmpty() }?.let { state.currentLocation = it }
+            extractedData.institution.takeIf { it.isNotEmpty() }?.let { state.collegeName = it }
             extractedData.degree.takeIf { it.isNotEmpty() }?.let { state.stream = it }
             extractedData.graduationYear.takeIf { it.isNotEmpty() }?.let { 
                 // Map graduation year to year of study
@@ -750,7 +750,7 @@ private fun ResumeStep(
                 }
             }
             extractedData.cgpa.takeIf { it.isNotEmpty() }?.let { state.cgpa = it }
-            extractedData.technicalSkills.takeIf { it.isNotEmpty() }?.let { skills ->
+            extractedData.skills.takeIf { it.isNotEmpty() }?.let { skills ->
                 state.technicalSkills.clear()
                 state.technicalSkills.addAll(skills)
             }

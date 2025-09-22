@@ -4,8 +4,8 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.pmis.app.utils.ResumeExtractor
-import com.pmis.app.utils.ExtractedResumeInfo
+import com.pmis.app.api.PDFExtractorAPI
+import com.pmis.app.api.ExtractedResumeData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,7 +17,7 @@ data class ResumeUploadState(
     val isError: Boolean = false,
     val errorMessage: String = "",
     val successMessage: String = "",
-    val extractedData: ExtractedResumeInfo? = null
+    val extractedData: ExtractedResumeData? = null
 )
 
 class ResumeUploadViewModel : ViewModel() {
@@ -25,17 +25,17 @@ class ResumeUploadViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(ResumeUploadState())
     val uiState: StateFlow<ResumeUploadState> = _uiState.asStateFlow()
     
-    private lateinit var resumeExtractor: ResumeExtractor
+    private lateinit var pdfExtractorAPI: PDFExtractorAPI
     
     fun initializeExtractor(context: Context) {
-        resumeExtractor = ResumeExtractor(context)
+        pdfExtractorAPI = PDFExtractorAPI(context)
     }
     
     fun uploadAndExtractResume(uri: Uri) {
-        if (!::resumeExtractor.isInitialized) {
+        if (!::pdfExtractorAPI.isInitialized) {
             _uiState.value = _uiState.value.copy(
                 isError = true,
-                errorMessage = "Resume extractor not initialized"
+                errorMessage = "PDF extractor not initialized"
             )
             return
         }
@@ -50,32 +50,22 @@ class ResumeUploadViewModel : ViewModel() {
             )
             
             try {
-                val result = resumeExtractor.extractResumeData(uri)
+                val extractedData = pdfExtractorAPI.extractData(uri)
                 
-                result.fold(
-                    onSuccess = { extractedData ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            isSuccess = true,
-                            successMessage = "Resume processed successfully! Data has been extracted and filled.",
-                            extractedData = extractedData
-                        )
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            isError = true,
-                            errorMessage = when {
-                                exception.message?.contains("selectable text") == true -> 
-                                    "This PDF appears to be scanned or image-based. Please upload a PDF with selectable text."
-                                exception.message?.contains("no pages") == true -> 
-                                    "The PDF file is empty or corrupted. Please upload a valid PDF file."
-                                else -> 
-                                    "Failed to process resume: ${exception.message ?: "Unknown error"}"
-                            }
-                        )
-                    }
-                )
+                if (extractedData != null) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isSuccess = true,
+                        successMessage = "Resume processed successfully! Data has been extracted and filled.",
+                        extractedData = extractedData
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isError = true,
+                        errorMessage = "Failed to extract data from the uploaded resume. Please try again."
+                    )
+                }
                 
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(

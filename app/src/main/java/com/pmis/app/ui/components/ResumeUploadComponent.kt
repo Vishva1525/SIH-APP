@@ -29,11 +29,12 @@ import com.pmis.app.ui.theme.CTAOrange
 import com.pmis.app.ui.theme.PurpleStart
 import com.pmis.app.viewmodel.ResumeUploadViewModel
 import com.pmis.app.viewmodel.ResumeUploadState
+import com.pmis.app.api.ExtractedResumeData
 
 @Composable
 fun ResumeUploadComponent(
     viewModel: ResumeUploadViewModel,
-    onDataExtracted: (com.pmis.app.utils.ExtractedResumeInfo) -> Unit,
+    onDataExtracted: (ExtractedResumeData) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
