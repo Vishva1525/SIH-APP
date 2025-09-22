@@ -25,10 +25,16 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.pmis.app.ui.theme.PMISAppTheme
 import com.pmis.app.ui.theme.PurpleStart
 import com.pmis.app.ui.theme.PurpleEnd
 import com.pmis.app.ui.theme.CTAOrange
+import com.pmis.app.viewmodel.DashboardViewModel
+import com.pmis.app.viewmodel.DashboardSummary
+import com.pmis.app.viewmodel.ActivityItem
+import com.pmis.app.viewmodel.ActivityType
 
 data class DashboardStat(
     val title: String,
@@ -53,9 +59,6 @@ data class RecentActivity(
     val type: ActivityType
 )
 
-enum class ActivityType {
-    INTERNSHIP, RECOMMENDATION, APPLICATION, UPDATE
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,6 +66,10 @@ fun DashboardScreen(
     onNavigateToScreen: (String) -> Unit = {},
     onBackClick: () -> Unit = {}
 ) {
+    val viewModel = remember { DashboardViewModel() }
+    val summary by viewModel.summary.collectAsState()
+    val activities by viewModel.activities.collectAsState()
+    
     Scaffold(
         topBar = {
             TopAppBar(
@@ -75,10 +82,24 @@ fun DashboardScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { onBackClick() }) {
+                    IconButton(
+                        onClick = { onBackClick() },
+                        modifier = Modifier.semantics { contentDescription = "Back" }
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = { onNavigateToScreen("notifications") },
+                        modifier = Modifier.semantics { contentDescription = "Notifications" }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Notifications"
                         )
                     }
                 }
@@ -100,23 +121,58 @@ fun DashboardScreen(
             
             // Stats Cards
             item {
-                StatsSection()
+                StatsSection(
+                    summary = summary,
+                    onActiveApplicationsClick = { onNavigateToScreen("applications") },
+                    onRecommendationsClick = { onNavigateToScreen("ml_recommendations") }
+                )
             }
             
             // Quick Actions
             item {
-                QuickActionsSection(onNavigateToScreen = onNavigateToScreen)
+                QuickActionsSection(
+                    onNavigateToScreen = onNavigateToScreen,
+                    onGetRecommendations = { viewModel.getRecommendations("quick_action") }
+                )
             }
             
             // Recent Activity
             item {
-                RecentActivitySection()
+                RecentActivitySection(
+                    activities = activities,
+                    onActivityClick = { activity ->
+                        handleActivityClick(activity, onNavigateToScreen)
+                    },
+                    onViewAllClick = { onNavigateToScreen("activity_feed") }
+                )
             }
             
             // Progress Overview
             item {
-                ProgressOverviewSection()
+                ProgressOverviewSection(
+                    profileCompletion = summary.profileCompletion,
+                    onProfileClick = { onNavigateToScreen("profile_edit") }
+                )
             }
+        }
+    }
+}
+
+private fun handleActivityClick(activity: ActivityItem, onNavigateToScreen: (String) -> Unit) {
+    when (activity.type) {
+        ActivityType.RECOMMENDATION -> {
+            val jobId = activity.payload["jobId"] as? String
+            onNavigateToScreen("recommendation_details?jobId=$jobId")
+        }
+        ActivityType.APPLICATION -> {
+            val applicationId = activity.payload["applicationId"] as? String
+            onNavigateToScreen("application_details?applicationId=$applicationId")
+        }
+        ActivityType.UPDATE -> {
+            onNavigateToScreen("profile_history")
+        }
+        ActivityType.INTERNSHIP -> {
+            onNavigateToScreen("internship_details")
         }
     }
 }
@@ -141,32 +197,36 @@ private fun DashboardHeader() {
 }
 
 @Composable
-private fun StatsSection() {
+private fun StatsSection(
+    summary: DashboardSummary,
+    onActiveApplicationsClick: () -> Unit = {},
+    onRecommendationsClick: () -> Unit = {}
+) {
     val stats = listOf(
         DashboardStat(
             title = "Active Applications",
-            value = "3",
+            value = summary.activeApplicationsCount.toString(),
             icon = Icons.AutoMirrored.Filled.List,
             color = PurpleStart,
             trend = "+2 this week"
         ),
         DashboardStat(
             title = "Recommendations",
-            value = "12",
+            value = summary.recommendationsCount.toString(),
             icon = Icons.Default.Star,
             color = CTAOrange,
             trend = "New matches"
         ),
         DashboardStat(
             title = "Profile Views",
-            value = "47",
+            value = summary.profileViews.toString(),
             icon = Icons.Default.Info,
             color = PurpleEnd,
             trend = "+15%"
         ),
         DashboardStat(
             title = "Completion",
-            value = "85%",
+            value = "${(summary.profileCompletion * 100).toInt()}%",
             icon = Icons.Default.CheckCircle,
             color = Color(0xFF4CAF50),
             trend = "Profile complete"
@@ -178,13 +238,23 @@ private fun StatsSection() {
         contentPadding = PaddingValues(horizontal = 4.dp)
     ) {
         items(stats) { stat ->
-            StatCard(stat = stat)
+            StatCard(
+                stat = stat,
+                onClick = when (stat.title) {
+                    "Active Applications" -> onActiveApplicationsClick
+                    "Recommendations" -> onRecommendationsClick
+                    else -> { -> }
+                }
+            )
         }
     }
 }
 
 @Composable
-private fun StatCard(stat: DashboardStat) {
+private fun StatCard(
+    stat: DashboardStat,
+    onClick: () -> Unit = {}
+) {
     var animatedValue by remember { mutableFloatStateOf(0f) }
     
     LaunchedEffect(stat) {
@@ -194,7 +264,11 @@ private fun StatCard(stat: DashboardStat) {
     Card(
         modifier = Modifier
             .width(160.dp)
-            .height(120.dp),
+            .height(120.dp)
+            .clickable { onClick() }
+            .semantics { 
+                contentDescription = "${stat.title}: ${stat.value}"
+            },
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
@@ -257,7 +331,8 @@ private fun StatCard(stat: DashboardStat) {
 
 @Composable
 private fun QuickActionsSection(
-    onNavigateToScreen: (String) -> Unit
+    onNavigateToScreen: (String) -> Unit,
+    onGetRecommendations: () -> Unit = {}
 ) {
     Column {
         Text(
@@ -275,7 +350,7 @@ private fun QuickActionsSection(
                 description = "Browse available opportunities",
                 icon = Icons.Default.Search,
                 color = PurpleStart,
-                route = "intern"
+                route = "internships_search"
             ),
             QuickAction(
                 title = "Get Recommendations",
@@ -289,7 +364,7 @@ private fun QuickActionsSection(
                 description = "Keep your info current",
                 icon = Icons.Default.Edit,
                 color = PurpleEnd,
-                route = "intern"
+                route = "profile_edit"
             ),
             QuickAction(
                 title = "View Applications",
@@ -307,7 +382,12 @@ private fun QuickActionsSection(
             items(quickActions) { action ->
                 QuickActionCard(
                     action = action,
-                    onClick = { onNavigateToScreen(action.route) }
+                    onClick = { 
+                        if (action.title == "Get Recommendations") {
+                            onGetRecommendations()
+                        }
+                        onNavigateToScreen(action.route) 
+                    }
                 )
             }
         }
@@ -319,11 +399,22 @@ private fun QuickActionCard(
     action: QuickAction,
     onClick: () -> Unit
 ) {
+    val actionId = when (action.title) {
+        "Find Internships" -> "quickFind"
+        "Get Recommendations" -> "quickRecommend"
+        "Update Profile" -> "quickProfile"
+        "View Applications" -> "quickApplications"
+        else -> "quick${action.title.replace(" ", "")}"
+    }
+    
     Card(
         modifier = Modifier
             .width(140.dp)
             .height(100.dp)
-            .clickable { onClick() },
+            .clickable { onClick() }
+            .semantics { 
+                contentDescription = "${action.title}: ${action.description}"
+            },
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -364,7 +455,11 @@ private fun QuickActionCard(
 }
 
 @Composable
-private fun RecentActivitySection() {
+private fun RecentActivitySection(
+    activities: List<ActivityItem>,
+    onActivityClick: (ActivityItem) -> Unit = {},
+    onViewAllClick: () -> Unit = {}
+) {
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -378,44 +473,37 @@ private fun RecentActivitySection() {
                 ),
                 color = MaterialTheme.colorScheme.onBackground
             )
-            TextButton(onClick = { /* View all */ }) {
+            TextButton(
+                onClick = onViewAllClick,
+                modifier = Modifier.semantics { contentDescription = "View All Activity" }
+            ) {
                 Text("View All")
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
         
-        val activities = listOf(
-            RecentActivity(
-                title = "New Recommendation",
-                description = "Data Science internship at TechCorp",
-                time = "2 hours ago",
-                type = ActivityType.RECOMMENDATION
-            ),
-            RecentActivity(
-                title = "Application Submitted",
-                description = "Software Developer role at StartupXYZ",
-                time = "1 day ago",
-                type = ActivityType.APPLICATION
-            ),
-            RecentActivity(
-                title = "Profile Updated",
-                description = "Added new skills and experience",
-                time = "3 days ago",
-                type = ActivityType.UPDATE
-            )
-        )
-        
         activities.forEach { activity ->
-            ActivityItem(activity = activity)
+            ActivityItem(
+                activity = activity,
+                onClick = { onActivityClick(activity) }
+            )
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
 
 @Composable
-private fun ActivityItem(activity: RecentActivity) {
+private fun ActivityItem(
+    activity: ActivityItem,
+    onClick: () -> Unit = {}
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .semantics { 
+                contentDescription = "${activity.title}: ${activity.description}"
+            },
         shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -467,7 +555,10 @@ private fun ActivityItem(activity: RecentActivity) {
 }
 
 @Composable
-private fun ProgressOverviewSection() {
+private fun ProgressOverviewSection(
+    profileCompletion: Float = 0.85f,
+    onProfileClick: () -> Unit = {}
+) {
     Column {
         Text(
             text = "Progress Overview",
@@ -479,7 +570,12 @@ private fun ProgressOverviewSection() {
         Spacer(modifier = Modifier.height(12.dp))
         
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onProfileClick() }
+                .semantics { 
+                    contentDescription = "Profile Completion: ${(profileCompletion * 100).toInt()}%"
+                },
             shape = RoundedCornerShape(12.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
@@ -500,7 +596,7 @@ private fun ProgressOverviewSection() {
                         )
                     )
                     Text(
-                        text = "85%",
+                        text = "${(profileCompletion * 100).toInt()}%",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold
                         ),
@@ -511,7 +607,7 @@ private fun ProgressOverviewSection() {
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 LinearProgressIndicator(
-                    progress = { 0.85f },
+                    progress = { profileCompletion },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(8.dp)
