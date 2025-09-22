@@ -74,7 +74,7 @@ fun HomeScreen(
     ) {
         // Hero Section
         item {
-            HeroSection(onNavigateToScreen = onNavigateToScreen)
+            HeroSection()
         }
         
         // Features Section
@@ -100,9 +100,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HeroSection(
-    onNavigateToScreen: (String) -> Unit
-) {
+private fun HeroSection() {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -164,36 +162,6 @@ private fun HeroSection(
                     color = Color.White
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Get Started button - clearly visible
-                Button(
-                    onClick = { onNavigateToScreen("intern") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .padding(horizontal = 16.dp)
-                        .semantics { contentDescription = "Get Started" },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFF6F00), // Solid orange
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 8.dp,
-                        pressedElevation = 12.dp
-                    )
-                ) {
-                    Text(
-                        text = "Get Started",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        ),
-                        color = Color.White,
-                        textAlign = TextAlign.Center
-                    )
-                }
             }
         }
     }

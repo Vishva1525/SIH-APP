@@ -151,7 +151,7 @@ fun DashboardScreen(
             item {
                 StatsSection(
                     summary = summary,
-                    onActiveApplicationsClick = { safeNavigate("applications") },
+                    onActiveApplicationsClick = { safeNavigate("ml_recommendations") },
                     onRecommendationsClick = { safeNavigate("ml_recommendations") }
                 )
             }
