@@ -35,6 +35,7 @@ import com.pmis.app.viewmodel.DashboardViewModel
 import com.pmis.app.viewmodel.DashboardSummary
 import com.pmis.app.viewmodel.ActivityItem
 import com.pmis.app.viewmodel.ActivityType
+import kotlinx.coroutines.delay
 
 data class DashboardStat(
     val title: String,
@@ -60,6 +61,30 @@ data class RecentActivity(
 )
 
 
+// Safe navigation helper to prevent crashes from rapid clicks
+@Composable
+private fun rememberSafeNavigation(
+    onNavigateToScreen: (String) -> Unit
+): (String) -> Unit {
+    var lastClickTime by remember { mutableStateOf(0L) }
+    val debounceTime = 500L // 500ms debounce
+    
+    return remember(onNavigateToScreen) {
+        { route: String ->
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastClickTime > debounceTime) {
+                lastClickTime = currentTime
+                try {
+                    onNavigateToScreen(route)
+                } catch (e: Exception) {
+                    // Log error but don't crash
+                    android.util.Log.e("DashboardScreen", "Navigation error: ${e.message}", e)
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
@@ -69,6 +94,9 @@ fun DashboardScreen(
     val viewModel = remember { DashboardViewModel() }
     val summary by viewModel.summary.collectAsState()
     val activities by viewModel.activities.collectAsState()
+    
+    // Use safe navigation to prevent crashes
+    val safeNavigate = rememberSafeNavigation(onNavigateToScreen)
     
     Scaffold(
         topBar = {
@@ -94,7 +122,7 @@ fun DashboardScreen(
                 },
                 actions = {
                     IconButton(
-                        onClick = { onNavigateToScreen("notifications") },
+                        onClick = { safeNavigate("notifications") },
                         modifier = Modifier.semantics { contentDescription = "Notifications" }
                     ) {
                         Icon(
@@ -123,15 +151,15 @@ fun DashboardScreen(
             item {
                 StatsSection(
                     summary = summary,
-                    onActiveApplicationsClick = { onNavigateToScreen("applications") },
-                    onRecommendationsClick = { onNavigateToScreen("ml_recommendations") }
+                    onActiveApplicationsClick = { safeNavigate("applications") },
+                    onRecommendationsClick = { safeNavigate("ml_recommendations") }
                 )
             }
             
             // Quick Actions
             item {
                 QuickActionsSection(
-                    onNavigateToScreen = onNavigateToScreen,
+                    onNavigateToScreen = safeNavigate,
                     onGetRecommendations = { viewModel.getRecommendations("quick_action") }
                 )
             }
@@ -141,9 +169,9 @@ fun DashboardScreen(
                 RecentActivitySection(
                     activities = activities,
                     onActivityClick = { activity ->
-                        handleActivityClick(activity, onNavigateToScreen)
+                        handleActivityClick(activity, safeNavigate)
                     },
-                    onViewAllClick = { onNavigateToScreen("activity_feed") }
+                    onViewAllClick = { safeNavigate("activity_feed") }
                 )
             }
             
@@ -151,7 +179,7 @@ fun DashboardScreen(
             item {
                 ProgressOverviewSection(
                     profileCompletion = summary.profileCompletion,
-                    onProfileClick = { onNavigateToScreen("profile_edit") }
+                    onProfileClick = { safeNavigate("profile_edit") }
                 )
             }
         }
