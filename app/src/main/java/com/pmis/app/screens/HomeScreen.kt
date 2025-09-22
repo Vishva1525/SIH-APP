@@ -35,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
 import androidx.compose.animation.Crossfade
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import com.pmis.app.R
@@ -126,82 +127,87 @@ private fun HeroSection(
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "PM Internship Scheme",
-                        style = MaterialTheme.typography.headlineLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 28.sp
-                        ),
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Empowering students with real-world opportunities and AI-powered recommendations",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.9f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Button(
-                            onClick = { onNavigateToScreen("intern") },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White,
-                                contentColor = PurpleStart
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                text = "Get Started",
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        
-                        OutlinedButton(
-                            onClick = { onNavigateToScreen("ml_recommendations") },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = Color.White
-                            ),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White)
-                        ) {
-                            Text(
-                                text = "Learn More",
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
-
-                Box(
+            // Background image carousel
+            Crossfade(targetState = currentIndex, animationSpec = tween(700)) { idx ->
+                Image(
+                    painter = painterResource(id = images[idx]),
+                    contentDescription = "Hero background visual",
                     modifier = Modifier
-                        .width(180.dp)
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(CTAOrange)
-                        .padding(8.dp),
-                    contentAlignment = Alignment.Center
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(16.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            // Semi-transparent overlay for text readability
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.3f),
+                                Color.Black.copy(alpha = 0.1f),
+                                Color.Black.copy(alpha = 0.4f)
+                            )
+                        )
+                    )
+            )
+
+            // Content on top
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "PM Internship Scheme",
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 28.sp
+                    ),
+                    color = Color.White,
+                    modifier = Modifier.shadow(2.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Empowering students with real-world opportunities and AI-powered recommendations",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = 0.95f),
+                    modifier = Modifier.shadow(1.dp)
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Crossfade(targetState = currentIndex, animationSpec = tween(700)) { idx ->
-                        Image(
-                            painter = painterResource(id = images[idx]),
-                            contentDescription = "Hero visual",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(12.dp)),
-                            contentScale = ContentScale.Crop
+                    Button(
+                        onClick = { onNavigateToScreen("intern") },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = CTAOrange,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "Get Started",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    
+                    OutlinedButton(
+                        onClick = { onNavigateToScreen("ml_recommendations") },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color.White
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(2.dp, Color.White)
+                    ) {
+                        Text(
+                            text = "Learn More",
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
