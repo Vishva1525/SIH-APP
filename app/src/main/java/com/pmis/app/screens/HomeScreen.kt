@@ -164,45 +164,31 @@ private fun HeroSection(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Get Started button with gradient background
+                // Get Started Now button with solid orange background
                 Button(
                     onClick = { onNavigateToScreen("intern") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Transparent,
+                        containerColor = DeepOrange,
                         contentColor = Color.White
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(16.dp),
                     elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 6.dp,
-                        pressedElevation = 10.dp
+                        defaultElevation = 8.dp,
+                        pressedElevation = 12.dp
                     )
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                brush = Brush.horizontalGradient(
-                                    colors = listOf(
-                                        DeepOrange,
-                                        Amber
-                                    )
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Get Started",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
-                            ),
-                            color = Color.White
-                        )
-                    }
+                    Text(
+                        text = "Get Started Now",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        ),
+                        color = Color.White,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }
