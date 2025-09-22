@@ -39,6 +39,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,7 +48,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.NavController
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -62,6 +65,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pmis.app.data.AppState
@@ -95,56 +101,114 @@ import kotlinx.coroutines.launch
 import com.pmis.app.utils.DocumentExtractor
 import java.io.File
 import android.net.Uri
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.heightIn
 
 private enum class InternStep(val label: String) {
+    Resume("Resume or Manual"),
     BasicInfo("Basic Info"),
-    Resume("Resume"),
+    AcademicBackground("Academic Background"),
+    LocationPreferences("Location"),
     Skills("Skills & Interests"),
-    Preferences("Preferences"),
-    Fairness("Fairness & Accessibility"),
-    Consent("Consent")
+    InternshipPreferences("Internship Preferences")
 }
 
 class InternFormState {
-    // Basic Info
+    // Basic Information
     var fullName: String by mutableStateOf("")
-    var verifiedId: String by mutableStateOf("")
+    var email: String by mutableStateOf("")
+    var phoneNumber: String by mutableStateOf("")
+    
+    // Academic Background
     var collegeName: String by mutableStateOf("")
+    var collegeTier: String by mutableStateOf("")
+    var cgpa: String by mutableStateOf("")
+    var stream: String by mutableStateOf("")
     var yearOfStudy: String by mutableStateOf("")
+    
+    // Location Preferences
+    var currentLocation: String by mutableStateOf("")
+    var preferredWorkLocation: MutableList<String> = mutableStateListOf()
+    var ruralUrbanClassification: String by mutableStateOf("")
+    
+    // Skills & Interests
+    var technicalSkills: MutableList<String> = mutableStateListOf()
+    var careerInterests: MutableList<String> = mutableStateListOf()
+    var domainInterests: MutableList<String> = mutableStateListOf()
+    
+    // Internship Preferences
+    var internshipDuration: String by mutableStateOf("")
+    var stipendExpectations: String by mutableStateOf("")
+    
+    // Legacy fields (keeping for backward compatibility)
+    var verifiedId: String by mutableStateOf("")
     var percentage: String by mutableStateOf("")
     var location: String by mutableStateOf("")
-    // Resume
     var resumePath: String by mutableStateOf("")
     var extractedEducation: String by mutableStateOf("")
     var extractedSkills: String by mutableStateOf("")
     var extractedExperience: String by mutableStateOf("")
-    // Skills
     var skills: MutableList<String> = mutableStateListOf()
     var preferredDomain: String by mutableStateOf("")
     var careerGoals: MutableList<String> = mutableStateListOf()
-    // Preferences
-    var prefLocation: String by mutableStateOf("")
-    var prefDuration: String by mutableStateOf("")
-    var prefWorkload: String by mutableStateOf("")
-    // Fairness & Accessibility
-    var fairnessBackground: String by mutableStateOf("")
-    var preferredLanguage: String by mutableStateOf("")
-    // Consent
-    var preferredChannel: String by mutableStateOf("")
-    var consentAllowed: Boolean by mutableStateOf(false)
 }
 
 @Composable
 fun InternRegistrationScreen(
     navController: NavController? = null,
-    onNavigateToScreen: ((String) -> Unit)? = null
+    onNavigateToScreen: ((String) -> Unit)? = null,
+    authManager: com.pmis.app.auth.AuthenticationManager? = null,
+    startStep: InternStep = InternStep.BasicInfo
 ) {
     val context = LocalContext.current
     val steps = InternStep.values().toList()
-    var currentStep by rememberSaveable { mutableStateOf(InternStep.BasicInfo.ordinal) }
+    var currentStep by rememberSaveable { mutableStateOf(startStep.ordinal) }
     val formState = remember { InternFormState() }
+    val coroutineScope = rememberCoroutineScope()
 
     val progress = (currentStep + 1) / steps.size.toFloat()
+
+    // Load existing form data if user is authenticated
+    LaunchedEffect(Unit) {
+        authManager?.let { auth ->
+            try {
+                val savedFormData = auth.loadFormResponses()
+                if (savedFormData != null) {
+                    // Copy saved data to current form state
+                    formState.fullName = savedFormData.fullName
+                    formState.email = savedFormData.email
+                    formState.phoneNumber = savedFormData.phoneNumber
+                    formState.collegeName = savedFormData.collegeName
+                    formState.collegeTier = savedFormData.collegeTier
+                    formState.cgpa = savedFormData.cgpa
+                    formState.stream = savedFormData.stream
+                    formState.yearOfStudy = savedFormData.yearOfStudy
+                    formState.currentLocation = savedFormData.currentLocation
+                    formState.ruralUrbanClassification = savedFormData.ruralUrbanClassification
+                    formState.technicalSkills.clear()
+                    formState.technicalSkills.addAll(savedFormData.technicalSkills)
+                    formState.careerInterests.clear()
+                    formState.careerInterests.addAll(savedFormData.careerInterests)
+                    formState.domainInterests.clear()
+                    formState.domainInterests.addAll(savedFormData.domainInterests)
+                    formState.internshipDuration = savedFormData.internshipDuration
+                    formState.stipendExpectations = savedFormData.stipendExpectations
+                    
+                    Toast.makeText(context, "Your previous responses have been loaded", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("InternForm", "Failed to load form data", e)
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -183,17 +247,17 @@ fun InternRegistrationScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         when (InternStep.values()[currentStep]) {
-            InternStep.BasicInfo -> BasicInfoStep(formState)
             InternStep.Resume -> ResumeStep(
                 state = formState,
                 onNavigateToStep = { step ->
                     currentStep = step.ordinal
                 }
             )
+            InternStep.BasicInfo -> BasicInfoStep(formState)
+            InternStep.AcademicBackground -> AcademicBackgroundStep(formState)
+            InternStep.LocationPreferences -> LocationPreferencesStep(formState)
             InternStep.Skills -> SkillsStep(formState)
-            InternStep.Preferences -> PreferencesStep(formState)
-            InternStep.Fairness -> FairnessStep(formState)
-            InternStep.Consent -> ConsentStep(formState)
+            InternStep.InternshipPreferences -> InternshipPreferencesStep(formState)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -214,17 +278,12 @@ fun InternRegistrationScreen(
             }
 
             val isValid = when (InternStep.values()[currentStep]) {
-                InternStep.BasicInfo -> formState.fullName.isNotBlank() && formState.collegeName.isNotBlank() && formState.yearOfStudy.isNotBlank()
-                InternStep.Resume -> true // optional
-                InternStep.Skills -> formState.skills.isNotEmpty()
-                InternStep.Preferences -> formState.prefLocation.isNotBlank() && formState.prefDuration.isNotBlank() && formState.prefWorkload.isNotBlank()
-                InternStep.Fairness -> formState.fairnessBackground.isNotBlank() && formState.preferredLanguage.isNotBlank()
-                InternStep.Consent -> {
-                    val channelValid = formState.preferredChannel.isNotBlank()
-                    val consentValid = formState.consentAllowed
-                    android.util.Log.d("InternForm", "Consent validation - channelValid: $channelValid, consentValid: $consentValid, preferredChannel: '${formState.preferredChannel}'")
-                    channelValid && consentValid
-                }
+                InternStep.Resume -> true // optional - can skip to manual entry
+                InternStep.BasicInfo -> formState.fullName.isNotBlank() && formState.email.isNotBlank() && formState.phoneNumber.isNotBlank()
+                InternStep.AcademicBackground -> formState.collegeName.isNotBlank() && formState.collegeTier.isNotBlank() && formState.cgpa.isNotBlank() && formState.stream.isNotBlank()
+                InternStep.LocationPreferences -> formState.currentLocation.isNotBlank() && formState.ruralUrbanClassification.isNotBlank()
+                InternStep.Skills -> formState.technicalSkills.isNotEmpty() || formState.careerInterests.isNotEmpty() || formState.domainInterests.isNotEmpty()
+                InternStep.InternshipPreferences -> formState.internshipDuration.isNotBlank() && formState.stipendExpectations.isNotBlank()
             }
 
             Button(
@@ -234,7 +293,7 @@ fun InternRegistrationScreen(
                     
                     android.util.Log.d("InternForm", "Button clicked - currentStep: $currentStep, lastIndex: ${steps.lastIndex}, isValid: $isValid")
                     android.util.Log.d("InternForm", "navController: $navController")
-                    android.util.Log.d("InternForm", "formState - fullName: ${formState.fullName}, consentAllowed: ${formState.consentAllowed}, preferredChannel: ${formState.preferredChannel}")
+                    android.util.Log.d("InternForm", "formState - fullName: ${formState.fullName}, internshipDuration: ${formState.internshipDuration}")
                     
                     if (currentStep < steps.lastIndex) {
                         currentStep += 1
@@ -243,7 +302,25 @@ fun InternRegistrationScreen(
                         Toast.makeText(context, "Getting AI Recommendations...", Toast.LENGTH_LONG).show()
                         
                         android.util.Log.d("InternForm", "Saving form data and navigating to ML recommendations")
+                        
+                        // Save to global app state
                         AppState.updateInternFormData(formState)
+                        
+                        // Save to user's database record if authenticated
+                        coroutineScope.launch {
+                            authManager?.let { auth ->
+                                try {
+                                    val saved = auth.saveFormResponses(formState)
+                                    if (saved) {
+                                        android.util.Log.d("InternForm", "Form data saved to user profile")
+                                    } else {
+                                        android.util.Log.e("InternForm", "Failed to save form data to user profile")
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("InternForm", "Error saving form data", e)
+                                }
+                            }
+                        }
                         
                         if (navController != null) {
                             android.util.Log.d("InternForm", "Navigating to ml_recommendations via NavController")
@@ -306,11 +383,13 @@ private fun SectionTitle(text: String, description: String? = null) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BasicInfoStep(state: InternFormState) {
-    SectionTitle(text = "Basic Info", description = "Tell us a little about yourself.")
+    SectionTitle(text = "Basic Information", description = "Tell us a little about yourself.")
     Spacer(modifier = Modifier.height(16.dp))
 
     val keyboard = LocalSoftwareKeyboardController.current
     val nameFocus = remember { FocusRequester() }
+    
+    // Full Name
     OutlinedTextField(
         value = state.fullName,
         onValueChange = { state.fullName = it },
@@ -328,31 +407,274 @@ private fun BasicInfoStep(state: InternFormState) {
     )
     Spacer(modifier = Modifier.height(12.dp))
 
+    // Email
     OutlinedTextField(
-        value = state.verifiedId,
-        onValueChange = { state.verifiedId = it },
-        label = { Text("Verified ID (Aadhaar/DigiLocker) — coming soon") },
-        placeholder = { Text("Enter ID or leave blank") },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, imeAction = ImeAction.Next),
-        modifier = Modifier.fillMaxWidth()
+        value = state.email,
+        onValueChange = { state.email = it },
+        label = { Text("Email Address *") },
+        placeholder = { Text("your.email@example.com") },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Email,
+            imeAction = ImeAction.Next
+        ),
+        keyboardActions = KeyboardActions(onNext = { keyboard?.hide() }),
+        modifier = Modifier.fillMaxWidth(),
+        isError = state.email.isNotEmpty() && !android.util.Patterns.EMAIL_ADDRESS.matcher(state.email).matches()
     )
+    if (state.email.isNotEmpty() && !android.util.Patterns.EMAIL_ADDRESS.matcher(state.email).matches()) {
+        Text(
+            text = "Please enter a valid email address",
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+        )
+    }
     Spacer(modifier = Modifier.height(12.dp))
 
+    // Phone Number
+    OutlinedTextField(
+        value = state.phoneNumber,
+        onValueChange = { state.phoneNumber = it },
+        label = { Text("Phone Number *") },
+        placeholder = { Text("+91 9876543210") },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Phone,
+            imeAction = ImeAction.Done
+        ),
+        keyboardActions = KeyboardActions(onDone = { keyboard?.hide() }),
+        modifier = Modifier.fillMaxWidth(),
+        isError = state.phoneNumber.isNotEmpty() && state.phoneNumber.length < 10
+    )
+    if (state.phoneNumber.isNotEmpty() && state.phoneNumber.length < 10) {
+        Text(
+            text = "Please enter a valid phone number",
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+        )
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AcademicBackgroundStep(state: InternFormState) {
+    SectionTitle(text = "Academic Background", description = "Tell us about your educational background.")
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // College Name
     OutlinedTextField(
         value = state.collegeName,
         onValueChange = { state.collegeName = it },
-        label = { Text("College Name *") },
+        label = { Text("University/College Name *") },
         placeholder = { Text("Start typing your college") },
         keyboardOptions = KeyboardOptions(
             capitalization = KeyboardCapitalization.Words,
             keyboardType = KeyboardType.Text,
-            imeAction = ImeAction.Done
+            imeAction = ImeAction.Next
         ),
-        keyboardActions = KeyboardActions(onDone = { keyboard?.hide() }),
         modifier = Modifier.fillMaxWidth()
     )
     Spacer(modifier = Modifier.height(12.dp))
 
+    // College Tier (exactly 3 options)
+    val collegeTiers = listOf("Select", "Tier 1", "Tier 2", "Tier 3")
+    var tierExpanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = tierExpanded,
+        onExpandedChange = { tierExpanded = !tierExpanded }
+    ) {
+        OutlinedTextField(
+            value = state.collegeTier.ifBlank { "Select" },
+            onValueChange = { },
+            readOnly = true,
+            label = { Text("College Tier *") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = tierExpanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor()
+        )
+        ExposedDropdownMenu(
+            expanded = tierExpanded,
+            onDismissRequest = { tierExpanded = false }
+        ) {
+            collegeTiers.drop(1).forEach { tier ->
+                DropdownMenuItem(
+                    text = { Text(tier) },
+                    onClick = {
+                        state.collegeTier = tier
+                        tierExpanded = false
+                    }
+                )
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(12.dp))
+
+    // CGPA
+    OutlinedTextField(
+        value = state.cgpa,
+        onValueChange = { state.cgpa = it },
+        label = { Text("Current CGPA *") },
+        placeholder = { Text("8.5") },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Decimal,
+            imeAction = ImeAction.Next
+        ),
+        modifier = Modifier.fillMaxWidth(),
+        isError = state.cgpa.isNotEmpty() && (state.cgpa.toDoubleOrNull()?.let { it < 0 || it > 10 } ?: false)
+    )
+    if (state.cgpa.isNotEmpty() && (state.cgpa.toDoubleOrNull()?.let { it < 0 || it > 10 } ?: false)) {
+        Text(
+            text = "Please enter a valid CGPA (0-10)",
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+        )
+    }
+    Spacer(modifier = Modifier.height(12.dp))
+
+    // Stream/Field of Study - Autocomplete with comprehensive list and accessibility
+    val allStreams = listOf(
+        // Engineering & Technology
+        "Computer Science & Engineering",
+        "Information Technology",
+        "Artificial Intelligence & Data Science",
+        "Electronics & Communication Engineering",
+        "Electrical Engineering",
+        "Mechanical Engineering",
+        "Civil Engineering",
+        "Chemical Engineering",
+
+        // Science
+        "Physics",
+        "Chemistry",
+        "Biotechnology",
+        "Data Science & Machine Learning",
+        "Cybersecurity",
+        "Environmental & Sustainability Studies",
+        "Cognitive Science",
+        "Bioinformatics",
+        "Biotechnology Entrepreneurship",
+
+        // Business & Management
+        "Accounting",
+        "Finance",
+        "Business Administration (BBA/MBA)",
+        "Economics",
+        "Banking & Insurance",
+        "Marketing",
+        "Human Resource Management",
+        "International Business",
+        "Entrepreneurship",
+        "Supply Chain Management",
+
+        // Arts & Humanities
+        "Literature (English, Regional Languages)",
+        "History",
+        "Political Science",
+        "Sociology",
+        "Philosophy",
+        "Anthropology",
+        "Psychology",
+        "Linguistics",
+        "Fine Arts (Painting, Sculpture)",
+        "Performing Arts (Music, Dance, Theatre)",
+
+        // Law & Social Sciences
+        "Law (LLB/LLM)",
+        "Criminology",
+        "International Relations",
+        "Public Administration",
+        "Social Work",
+        "Gender Studies",
+        "Development Studies",
+
+        // Media & Communication
+        "Journalism",
+        "Mass Communication",
+        "Film Studies",
+        "Media Production",
+        "Digital Marketing",
+        "Advertising & Public Relations",
+
+        // Education
+        "Education (B.Ed, M.Ed)",
+        "Special Education",
+        "Curriculum Development",
+        "Educational Psychology",
+
+        // Emerging Fields
+        "Sports Science",
+        "Design Thinking & Innovation",
+        "Space Studies"
+    )
+
+    var streamExpanded by remember { mutableStateOf(false) }
+    var streamText by remember { mutableStateOf(state.stream) }
+    var highlightedIndex by remember { mutableStateOf(0) }
+
+    val filteredStreams = remember(streamText) {
+        if (streamText.isBlank()) allStreams
+        else allStreams.filter { stream ->
+            // Filter by first letter or word start
+            stream.split(" ").any { word -> 
+                word.startsWith(streamText, ignoreCase = true)
+            }
+        }
+    }
+
+    // Ensure highlighted index stays in bounds when list changes
+    LaunchedEffect(filteredStreams.size) {
+        if (highlightedIndex >= filteredStreams.size) highlightedIndex = 0
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = streamExpanded,
+        onExpandedChange = { streamExpanded = !streamExpanded }
+    ) {
+        OutlinedTextField(
+            value = streamText,
+            onValueChange = { newValue ->
+                streamText = newValue
+                state.stream = newValue
+                streamExpanded = true
+            },
+            readOnly = false,
+            label = { Text("Stream/Field of Study *") },
+            placeholder = { Text("Type to search or select") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = streamExpanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor()
+        )
+        ExposedDropdownMenu(
+            expanded = streamExpanded,
+            onDismissRequest = { streamExpanded = false }
+        ) {
+            if (filteredStreams.isEmpty()) {
+                DropdownMenuItem(text = { Text("No matching field found") }, onClick = { })
+            } else {
+                filteredStreams.forEachIndexed { index, stream ->
+                    DropdownMenuItem(
+                        text = { Text(stream) },
+                        onClick = {
+                            streamText = stream
+                            state.stream = stream
+                            streamExpanded = false
+                        },
+                        // lightweight visual cue for keyboard highlight
+                        leadingIcon = if (index == highlightedIndex) {
+                            { Icon(imageVector = Icons.Default.Check, contentDescription = null) }
+                        } else null
+                    )
+                }
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(12.dp))
+
+    // Year of Study
     val years = listOf("1st Year", "2nd Year", "3rd Year", "4th Year")
     var expanded by remember { mutableStateOf(false) }
 
@@ -388,6 +710,7 @@ private fun BasicInfoStep(state: InternFormState) {
         }
     }
 }
+
 
 @Composable
 private fun ResumeStep(
@@ -584,36 +907,409 @@ private fun ResumeStep(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SkillsStep(state: InternFormState) {
-    SectionTitle(text = "Skills & Interests", description = "Pick up to 5 skills and your preferred domain.")
+private fun LocationPreferencesStep(state: InternFormState) {
+    SectionTitle(text = "Location Preferences", description = "Tell us about your location preferences.")
     Spacer(modifier = Modifier.height(16.dp))
 
-    var newSkill by remember { mutableStateOf("") }
-    OutlinedTextField(
-        value = newSkill,
-        onValueChange = { newSkill = it },
-        label = { Text("Top 5 Skills") },
-        placeholder = { Text("Type a skill and press Add") },
-        modifier = Modifier.fillMaxWidth()
+    // Current Location - Indian states autocomplete (starts-with, case-insensitive)
+    val indianStates = listOf(
+        "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+        "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand",
+        "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
+        "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab",
+        "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura",
+        "Uttar Pradesh", "Uttarakhand", "West Bengal",
+        // Union Territories
+        "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu",
+        "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+    )
+
+    var locationExpanded by remember { mutableStateOf(false) }
+    var locationText by remember { mutableStateOf(state.currentLocation) }
+    var highlightedIndex by remember { mutableStateOf(0) }
+
+    val filteredStates = remember(locationText) {
+        val q = locationText.trim()
+        if (q.isBlank()) emptyList() else indianStates.filter { it.startsWith(q, ignoreCase = true) }
+    }
+
+    LaunchedEffect(filteredStates.size) {
+        if (highlightedIndex >= filteredStates.size) highlightedIndex = 0
+    }
+
+    ExposedDropdownMenuBox(
+        expanded = locationExpanded,
+        onExpandedChange = { locationExpanded = !locationExpanded }
+    ) {
+        OutlinedTextField(
+            value = locationText,
+            onValueChange = { newValue ->
+                locationText = newValue
+                state.currentLocation = newValue
+                // Only expand when there's some input
+                locationExpanded = newValue.isNotBlank()
+            },
+            readOnly = false,
+            label = { Text("Current Location *") },
+            placeholder = { Text("Type your state name") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = locationExpanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor()
+        )
+        ExposedDropdownMenu(
+            expanded = locationExpanded,
+            onDismissRequest = { locationExpanded = false }
+        ) {
+            if (filteredStates.isEmpty()) {
+                DropdownMenuItem(text = { Text("No state found") }, onClick = { })
+            } else {
+                filteredStates.forEachIndexed { index, s ->
+                    DropdownMenuItem(
+                        text = { Text(s) },
+                        onClick = {
+                            locationText = s
+                            state.currentLocation = s
+                            locationExpanded = false
+                        },
+                        leadingIcon = if (index == highlightedIndex) {
+                            { Icon(imageVector = Icons.Default.Check, contentDescription = null) }
+                        } else null
+                    )
+                }
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(12.dp))
+
+    // Rural / Urban Classification (strict two-option dropdown)
+    val ruralUrbanOptions = listOf("Rural", "Urban")
+    var ruralUrbanExpanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = ruralUrbanExpanded,
+        onExpandedChange = { ruralUrbanExpanded = !ruralUrbanExpanded }
+    ) {
+        OutlinedTextField(
+            value = state.ruralUrbanClassification.ifBlank { "Select" },
+            onValueChange = { },
+            readOnly = true,
+            label = { Text("Rural / Urban Classification *") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = ruralUrbanExpanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor()
+        )
+        ExposedDropdownMenu(
+            expanded = ruralUrbanExpanded,
+            onDismissRequest = { ruralUrbanExpanded = false }
+        ) {
+            ruralUrbanOptions.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        state.ruralUrbanClassification = option
+                        ruralUrbanExpanded = false
+                    }
+                )
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // Preferred Work Locations (Multi-select)
+    Text(
+        text = "Preferred Work Locations (Select all that apply)",
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.Medium
     )
     Spacer(modifier = Modifier.height(8.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(
-            onClick = {
-                val skill = newSkill.trim()
-                if (skill.isNotEmpty() && state.skills.size < 5 && !state.skills.contains(skill)) {
-                    state.skills.add(skill)
-                    newSkill = ""
-                }
-            },
-            enabled = newSkill.isNotBlank() && state.skills.size < 5
-        ) { Text("Add") }
-        Text(text = "${'$'}{state.skills.size}/5 selected", style = MaterialTheme.typography.bodySmall)
-    }
-    Spacer(modifier = Modifier.height(8.dp))
+    
+    val workLocations = listOf(
+        "Same as current location", "Delhi", "Mumbai", "Bangalore", "Chennai", 
+        "Hyderabad", "Pune", "Kolkata", "Remote", "Anywhere"
+    )
+    
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(state.skills) { skill ->
-            FilterChip(selected = true, onClick = { state.skills.remove(skill) }, label = { Text(skill) })
+        items(workLocations) { location ->
+            val isSelected = state.preferredWorkLocation.contains(location)
+            FilterChip(
+                selected = isSelected,
+                onClick = {
+                    if (isSelected) {
+                        state.preferredWorkLocation.remove(location)
+                    } else {
+                        state.preferredWorkLocation.add(location)
+                    }
+                },
+                label = { Text(location) }
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun LinkedInStyleSkillPicker(
+    selectedSkills: MutableList<String>,
+    onSkillsChange: () -> Unit = {},
+    label: String = "Technical Skills",
+    placeholder: String = "Add a skill"
+) {
+    val commonSkills = listOf(
+        "Python", "Java", "JavaScript", "SQL", "Machine Learning", "Data Analysis",
+        "React", "Node.js", "Deep Learning", "Web Development", "Mobile Development",
+        "Database Management", "C++", "C#", "Go", "Rust", "Scala", "Ruby", "PHP",
+        "Spring", "Django", "Flask", "Laravel", "Rails", "ASP.NET",
+        "TensorFlow", "PyTorch", "Keras", "Pandas", "NumPy", "Scikit-learn",
+        "HTML", "CSS", "Bootstrap", "Sass", "Less", "Webpack", "Babel",
+        "Docker", "Kubernetes", "AWS", "Azure", "GCP", "Git", "GitHub", "GitLab",
+        "Jenkins", "CI/CD", "Android", "iOS", "Flutter", "React Native", "Kotlin", "Swift",
+        "MongoDB", "PostgreSQL", "MySQL", "Redis", "GraphQL", "REST API", "Microservices",
+        "Angular", "Vue.js", "TypeScript", "Tailwind CSS", "Material UI", "Firebase"
+    )
+    
+    var inputText by remember { mutableStateOf("") }
+    var showSuggestions by remember { mutableStateOf(false) }
+    var showDuplicateMessage by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    
+    val filteredSuggestions = remember(inputText) {
+        if (inputText.isBlank()) emptyList()
+        else commonSkills.filter { 
+            it.contains(inputText, ignoreCase = true) && 
+            !selectedSkills.contains(it)
+        }.take(8)
+    }
+    
+    // Hide duplicate message after 2 seconds
+    LaunchedEffect(showDuplicateMessage) {
+        if (showDuplicateMessage) {
+            kotlinx.coroutines.delay(2000)
+            showDuplicateMessage = false
+        }
+    }
+    
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Selected Skills Chips
+        if (selectedSkills.isNotEmpty()) {
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                selectedSkills.forEach { skill ->
+                    AssistChip(
+                        onClick = { 
+                            selectedSkills.remove(skill)
+                            onSkillsChange()
+                        },
+                        label = { 
+                            Text(
+                                text = skill,
+                                style = MaterialTheme.typography.bodySmall
+                            ) 
+                        },
+                        trailingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Remove $skill",
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            trailingIconContentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                        modifier = Modifier.height(32.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+        
+        // Input Field with Suggestions
+        Box {
+            OutlinedTextField(
+                value = inputText,
+                onValueChange = { newValue ->
+                    inputText = newValue
+                    showSuggestions = newValue.isNotBlank()
+                    showDuplicateMessage = false
+                },
+                placeholder = { Text(placeholder) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { focusState ->
+                        showSuggestions = focusState.isFocused && inputText.isNotBlank()
+                    },
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        val skill = inputText.trim()
+                        if (skill.isNotEmpty()) {
+                            if (selectedSkills.contains(skill)) {
+                                showDuplicateMessage = true
+                            } else {
+                                selectedSkills.add(skill)
+                                inputText = ""
+                                showSuggestions = false
+                                onSkillsChange()
+                            }
+                        }
+                        keyboardController?.hide()
+                    }
+                ),
+                singleLine = true,
+                isError = showDuplicateMessage
+            )
+            
+            // Suggestions Dropdown
+            if (showSuggestions && filteredSuggestions.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = 56.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 200.dp)
+                    ) {
+                        items(filteredSuggestions) { suggestion ->
+                            DropdownMenuItem(
+                                text = { 
+                                    Text(
+                                        text = suggestion,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    ) 
+                                },
+                                onClick = {
+                                    selectedSkills.add(suggestion)
+                                    inputText = ""
+                                    showSuggestions = false
+                                    onSkillsChange()
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Error/Feedback Messages
+        if (showDuplicateMessage) {
+            Text(
+                text = "Skill already added",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+            )
+        }
+        
+        // Helper text
+        if (selectedSkills.isEmpty()) {
+            Text(
+                text = "Start typing to see suggestions or press Enter to add custom skills",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SkillsStep(state: InternFormState) {
+    SectionTitle(text = "Skills & Interests", description = "Select your technical skills and career interests.")
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // Technical Skills Section - LinkedIn Style
+    LinkedInStyleSkillPicker(
+        selectedSkills = state.technicalSkills,
+        onSkillsChange = { /* State is automatically updated */ },
+        label = "Technical Skills",
+        placeholder = "Add a skill (e.g., Python, React, Machine Learning)"
+    )
+    
+    Spacer(modifier = Modifier.height(16.dp))
+    
+    // Career Interests Section
+    Text(
+        text = "Career Interests (Select all that apply)",
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.Medium
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    
+    val careerInterests = listOf(
+        "Data Science", "Software Development", "AI/ML", "Web Development", 
+        "Mobile Apps", "Database Administration", "Cloud Computing", "Cybersecurity",
+        "DevOps", "UI/UX Design", "Product Management", "Business Analysis",
+        "Quality Assurance", "System Administration", "Network Engineering"
+    )
+    
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(careerInterests) { interest ->
+            val isSelected = state.careerInterests.contains(interest)
+            FilterChip(
+                selected = isSelected,
+                onClick = {
+                    if (isSelected) {
+                        state.careerInterests.remove(interest)
+                    } else {
+                        state.careerInterests.add(interest)
+                    }
+                },
+                label = { Text(interest) }
+            )
+        }
+    }
+    
+    Spacer(modifier = Modifier.height(16.dp))
+    
+    // Domain Interests Section
+    Text(
+        text = "Domain Interests (Select all that apply)",
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.Medium
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    
+    val domainInterests = listOf(
+        "Data Science", "Software Development", "AI/ML", "Web Development", 
+        "Mobile Apps", "Database", "Cloud Computing", "Cybersecurity",
+        "FinTech", "HealthTech", "EdTech", "E-commerce", "Gaming", "IoT"
+    )
+    
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(domainInterests) { domain ->
+            val isSelected = state.domainInterests.contains(domain)
+            FilterChip(
+                selected = isSelected,
+                onClick = {
+                    if (isSelected) {
+                        state.domainInterests.remove(domain)
+                    } else {
+                        state.domainInterests.add(domain)
+                    }
+                },
+                label = { Text(domain) }
+            )
         }
     }
 
@@ -705,52 +1401,80 @@ private fun SkillsStep(state: InternFormState) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PreferencesStep(state: InternFormState) {
-    SectionTitle(text = "Preferences", description = "Tell us how you prefer to work.")
+private fun InternshipPreferencesStep(state: InternFormState) {
+    SectionTitle(text = "Internship Preferences", description = "Tell us about your internship preferences.")
     Spacer(modifier = Modifier.height(16.dp))
 
-    val locations = listOf("Select", "Remote", "On-site", "Hybrid")
-    val durations = listOf("Select", "1-3 months", "3-6 months", "6+ months")
-    val workloads = listOf("Select", "Part-time", "Full-time")
-
-    DropdownField("Location", locations, state.prefLocation) { state.prefLocation = it }
-    Spacer(modifier = Modifier.height(12.dp))
-    DropdownField("Duration", durations, state.prefDuration) { state.prefDuration = it }
-    Spacer(modifier = Modifier.height(12.dp))
-    DropdownField("Workload", workloads, state.prefWorkload) { state.prefWorkload = it }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FairnessStep(state: InternFormState) {
-    SectionTitle(text = "Fairness & Accessibility", description = "Help us ensure inclusive recommendations.")
-    Spacer(modifier = Modifier.height(16.dp))
-
-    val backgrounds = listOf("Select", "General", "PWD", "First-generation learner", "Minority", "Prefer not to say")
-    val languages = listOf("Select", "English", "Hindi", "Bengali", "Tamil", "Telugu", "Marathi", "Kannada", "Gujarati", "Odia")
-
-    DropdownField("Background", backgrounds, state.fairnessBackground) { state.fairnessBackground = it }
-    Spacer(modifier = Modifier.height(12.dp))
-    DropdownField("Preferred Language", languages, state.preferredLanguage) { state.preferredLanguage = it }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ConsentStep(state: InternFormState) {
-    SectionTitle(text = "Notifications & Consent", description = "Choose how we reach you and allow recommendations.")
-    Spacer(modifier = Modifier.height(16.dp))
-
-    val channels = listOf("Select", "Email", "SMS", "Phone", "WhatsApp")
-    DropdownField("Preferred channel", channels, state.preferredChannel) { state.preferredChannel = it }
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        val checked = state.consentAllowed
-        FilterChip(selected = checked, onClick = { state.consentAllowed = !checked }, label = {
-            Text("I allow my data to be used for internship recommendations.")
-        })
+    // Internship Duration
+    val durations = listOf("3 months", "6 months", "12 months")
+    var durationExpanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = durationExpanded,
+        onExpandedChange = { durationExpanded = !durationExpanded }
+    ) {
+        OutlinedTextField(
+            value = state.internshipDuration.ifBlank { "Select Duration" },
+            onValueChange = { },
+            readOnly = true,
+            label = { Text("Internship Duration *") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = durationExpanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor()
+        )
+        ExposedDropdownMenu(
+            expanded = durationExpanded,
+            onDismissRequest = { durationExpanded = false }
+        ) {
+            durations.forEach { duration ->
+                DropdownMenuItem(
+                    text = { Text(duration) },
+                    onClick = {
+                        state.internshipDuration = duration
+                        durationExpanded = false
+                    }
+                )
+            }
+        }
     }
+    Spacer(modifier = Modifier.height(12.dp))
+
+    // Stipend Expectation (Numeric Input)
+    OutlinedTextField(
+        value = state.stipendExpectations,
+        onValueChange = { newValue ->
+            // Only allow numeric input, max 6 digits
+            val numericValue = newValue.filter { it.isDigit() }
+            if (numericValue.length <= 6) {
+                state.stipendExpectations = numericValue
+            }
+        },
+        label = { Text("Stipend Expectation *") },
+        placeholder = { Text("Enter expected stipend") },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Done
+        ),
+        modifier = Modifier.fillMaxWidth(),
+        leadingIcon = {
+            Text(
+                text = "₹",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(start = 12.dp)
+            )
+        },
+        supportingText = {
+            Text(
+                text = "Enter amount in rupees (max 6 digits)",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
+    )
+    Spacer(modifier = Modifier.height(16.dp))
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

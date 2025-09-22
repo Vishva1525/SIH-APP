@@ -25,7 +25,7 @@ object InternDataExtractor {
         val cgpa = extractCGPA(formState.percentage)
         
         // Determine location type
-        val ruralUrban = MLRecommendationsApi.mapLocationToRuralUrban(formState.prefLocation)
+        val ruralUrban = MLRecommendationsApi.mapLocationToRuralUrban(formState.currentLocation)
         
         // Map college to tier
         val collegeTier = MLRecommendationsApi.mapCollegeToTier(formState.collegeName)

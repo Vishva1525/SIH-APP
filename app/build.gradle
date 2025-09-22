@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'com.google.gms.google-services'
+    id 'kotlin-kapt'
 }
 
 android {
@@ -9,7 +9,7 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.pmis.app"
+        applicationId "com.pmis.app.v2"
         minSdk 21
         targetSdk 34
         versionCode 2
@@ -77,12 +77,23 @@ dependencies {
     // PDF text extraction
     implementation 'org.apache.pdfbox:pdfbox:2.0.29'
     
-    // Google Sign-In (for Supabase integration)
-    implementation 'com.google.android.gms:play-services-auth:20.5.0'
+    // Google Identity Services (latest and recommended)
+    implementation 'com.google.android.gms:play-services-auth:21.0.0'
+    implementation 'androidx.credentials:credentials:1.2.2'
+    implementation 'androidx.credentials:credentials-play-services-auth:1.2.2'
+    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.0'
     
-    // HTTP client for Supabase API calls
+    // Room database for local data persistence
+    implementation 'androidx.room:room-runtime:2.6.1'
+    implementation 'androidx.room:room-ktx:2.6.1'
+    kapt 'androidx.room:room-compiler:2.6.1'
+    
+    // HTTP client for API calls
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
+    
+    // JSON handling
+    implementation 'com.google.code.gson:gson:2.10.1'
     
     // Testing dependencies
     testImplementation 'junit:junit:4.13.2'

@@ -10,13 +10,21 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.pmis.app.screens.AuthScreen
+import com.pmis.app.auth.AuthenticationManager
+import com.pmis.app.screens.LoginScreen
 import com.pmis.app.screens.WelcomeScreen
 import com.pmis.app.ui.theme.PMISAppTheme
 
 class MainActivitySimple : ComponentActivity() {
+    
+    private lateinit var authManager: AuthenticationManager
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Initialize AuthenticationManager
+        authManager = AuthenticationManager.getInstance(this)
+        
         setContent {
             PMISAppTheme {
                 Surface(
@@ -36,8 +44,11 @@ class MainActivitySimple : ComponentActivity() {
                             )
                         }
                         
-                        composable("auth") {
-                            AuthScreen(navController = navController)
+                        composable("login") {
+                            LoginScreen(
+                                navController = navController,
+                                authManager = authManager
+                            )
                         }
                     }
                 }

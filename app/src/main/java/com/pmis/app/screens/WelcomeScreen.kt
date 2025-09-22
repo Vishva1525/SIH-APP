@@ -75,7 +75,7 @@ fun WelcomeScreen(
         // CTA Button at the bottom
         Button(
             onClick = { 
-                navController.navigate("auth")
+                navController.navigate("login")
             },
             modifier = Modifier
                 .fillMaxWidth()

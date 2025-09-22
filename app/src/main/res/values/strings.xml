@@ -16,8 +16,8 @@
     <string name="supabase_url">https://ctwgidetrhlbbaiqapwe.supabase.co</string>
     <string name="supabase_anon_key">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0d2dpZGV0cmhsYmJhaXFhcHdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzNTI0MTcsImV4cCI6MjA3MzkyODQxN30.-BrbFWph4V4iXJMfkM-Acg-r86I9sVJWwEFvISJDkcI</string>
     
-    <!-- Google OAuth Client ID for Android (from google-services.json) -->
-    <string name="google_oauth_client_id">777495340370-abcdef1234567890.apps.googleusercontent.com</string>
+    <!-- Google OAuth Web Client ID (from Google Cloud Console) -->
+    <string name="google_oauth_client_id">327389865401-4takvtoo8cq107fjg8s3d5caa5lipdrc.apps.googleusercontent.com</string>
     
     <!-- Welcome Screen Strings -->
     <string name="welcome_message">Welcome to the PM Internship Scheme</string>

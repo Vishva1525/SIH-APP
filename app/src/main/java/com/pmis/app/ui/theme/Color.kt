@@ -2,10 +2,10 @@ package com.pmis.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val PurpleStart = Color(0xFF6A00F4)   // deep purple left
-val PurpleEnd   = Color(0xFFA64DFF)   // lighter purple right
-val CTAOrange   = Color(0xFFFF6600)   // button / highlight orange
-val WhiteColor  = Color(0xFFFFFFFF)
+val PurpleStart = Color(0xFFFF6600)   // orange primary (replacing purple)
+val PurpleEnd   = Color(0xFFFFB366)   // lighter orange gradient
+val CTAOrange   = Color(0xFFFF6600)   // button / highlight orange (same)
+val WhiteColor  = Color(0xFFFFFDF5)   // cream white
 
 // Additional theme colors
 val BlackColor = Color(0xFF000000)

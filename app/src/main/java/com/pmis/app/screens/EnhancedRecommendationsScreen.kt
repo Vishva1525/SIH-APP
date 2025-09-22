@@ -125,16 +125,33 @@ fun EnhancedRecommendationsScreen(
             )
             
             // Recommendations List
+            val filteredRecommendations = remember(recommendations, selectedFilter) {
+                when (selectedFilter) {
+                    "High Match" -> recommendations.filter { it.matchScore >= 80 }
+                    "Remote" -> recommendations.filter { it.isRemote }
+                    "Urgent" -> recommendations.filter { it.isUrgent }
+                    "Recent" -> recommendations.sortedByDescending { it.id } // Mock recent sorting
+                    else -> recommendations
+                }
+            }
+            
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(recommendations) { recommendation ->
+                items(filteredRecommendations) { recommendation ->
                     RecommendationCard(
                         recommendation = recommendation,
                         onClick = { /* Handle click */ }
                     )
+                }
+                
+                // Show empty state if no filtered results
+                if (filteredRecommendations.isEmpty() && selectedFilter != "All") {
+                    item {
+                        EmptyFilterState(selectedFilter = selectedFilter)
+                    }
                 }
             }
         }
@@ -542,26 +559,104 @@ private fun SkillChip(skill: String) {
     }
 }
 
+@Composable
+private fun EmptyFilterState(selectedFilter: String) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = PurpleStart.copy(alpha = 0.05f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Default.SearchOff,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = PurpleStart.copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "No $selectedFilter Internships Found",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Try selecting a different filter or check back later for new opportunities.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
 /**
  * Create a recommendation request from the intern form state
  */
 private fun createRecommendationRequest(internFormState: InternFormState): MLRecommendationsApi.RecommendationRequest {
     val studentId = MLRecommendationsApi.generateStudentId()
-    val skills = internFormState.skills
-    val stream = internFormState.preferredDomain.ifEmpty { "Computer Science" }
-    val cgpa = internFormState.percentage.toDoubleOrNull() ?: 8.0
-    val ruralUrban = MLRecommendationsApi.mapLocationToRuralUrban(internFormState.location)
-    val collegeTier = MLRecommendationsApi.mapCollegeToTier(internFormState.collegeName)
+    
+    // Use new comprehensive input fields
+    val skills = if (internFormState.technicalSkills.isNotEmpty()) {
+        internFormState.technicalSkills
+    } else {
+        internFormState.skills // fallback to legacy field
+    }
+    
+    val stream = if (internFormState.stream.isNotBlank()) {
+        internFormState.stream
+    } else {
+        internFormState.preferredDomain.ifEmpty { "Computer Science" } // fallback
+    }
+    
+    val cgpa = if (internFormState.cgpa.isNotBlank()) {
+        internFormState.cgpa.toDoubleOrNull() ?: 8.0
+    } else {
+        internFormState.percentage.toDoubleOrNull() ?: 8.0 // fallback
+    }
+    
+    val ruralUrban = if (internFormState.ruralUrbanClassification.isNotBlank()) {
+        internFormState.ruralUrbanClassification
+    } else {
+        MLRecommendationsApi.mapLocationToRuralUrban(internFormState.currentLocation.ifEmpty { internFormState.location })
+    }
+    
+    val collegeTier = if (internFormState.collegeTier.isNotBlank()) {
+        internFormState.collegeTier
+    } else {
+        MLRecommendationsApi.mapCollegeToTier(internFormState.collegeName)
+    }
     
     // Log all inputs being sent to ML model
-    Log.d("ML_Inputs", "=== ML MODEL INPUTS ===")
+    Log.d("ML_Inputs", "=== COMPREHENSIVE ML MODEL INPUTS ===")
     Log.d("ML_Inputs", "Student ID: $studentId")
-    Log.d("ML_Inputs", "Skills: $skills")
+    Log.d("ML_Inputs", "Name: ${internFormState.fullName}")
+    Log.d("ML_Inputs", "Email: ${internFormState.email}")
+    Log.d("ML_Inputs", "Phone: ${internFormState.phoneNumber}")
+    Log.d("ML_Inputs", "Technical Skills: $skills")
+    Log.d("ML_Inputs", "Career Interests: ${internFormState.careerInterests}")
+    Log.d("ML_Inputs", "Domain Interests: ${internFormState.domainInterests}")
     Log.d("ML_Inputs", "Stream: $stream")
     Log.d("ML_Inputs", "CGPA: $cgpa")
-    Log.d("ML_Inputs", "Location: ${internFormState.location} -> Rural/Urban: $ruralUrban")
-    Log.d("ML_Inputs", "College: ${internFormState.collegeName} -> Tier: $collegeTier")
-    Log.d("ML_Inputs", "========================")
+    Log.d("ML_Inputs", "Current Location: ${internFormState.currentLocation}")
+    Log.d("ML_Inputs", "Preferred Work Locations: ${internFormState.preferredWorkLocation}")
+    Log.d("ML_Inputs", "Rural/Urban: $ruralUrban")
+    Log.d("ML_Inputs", "College: ${internFormState.collegeName}")
+    Log.d("ML_Inputs", "College Tier: $collegeTier")
+    Log.d("ML_Inputs", "Internship Duration: ${internFormState.internshipDuration}")
+    Log.d("ML_Inputs", "Stipend Expectations: ${internFormState.stipendExpectations}")
+    // Optional enhancement fields removed
+    Log.d("ML_Inputs", "Optional enhancement details: Not collected")
+    Log.d("ML_Inputs", "=====================================")
     
     return MLRecommendationsApi.RecommendationRequest(
         student_id = studentId,

@@ -244,7 +244,7 @@ class DocumentExtractor(private val context: Context) {
             val educationLines = mutableListOf<String>()
             
             for (line in lines) {
-                val lowerLine = line.lowercase()
+        val lowerLine = line.lowercase()
                 if (educationKeywords.any { keyword -> lowerLine.contains(keyword) }) {
                     val cleanLine = line.trim()
                     if (cleanLine.isNotEmpty() && cleanLine.length > 5) {

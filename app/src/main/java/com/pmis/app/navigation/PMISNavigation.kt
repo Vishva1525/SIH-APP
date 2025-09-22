@@ -1,12 +1,17 @@
 package com.pmis.app.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.pmis.app.auth.AuthenticationManager
 import com.pmis.app.data.AppState
 import com.pmis.app.screens.AboutScreen
-import com.pmis.app.screens.AuthScreen
 import com.pmis.app.screens.ContactScreen
 import com.pmis.app.screens.DashboardScreen
 import com.pmis.app.screens.EmployersScreen
@@ -14,6 +19,7 @@ import com.pmis.app.screens.EnhancedRecommendationsScreen
 import com.pmis.app.screens.GuidelinesScreen
 import com.pmis.app.screens.HomeScreen
 import com.pmis.app.screens.InternRegistrationScreen
+import com.pmis.app.screens.LoginScreen
 import com.pmis.app.screens.MainScreen
 import com.pmis.app.screens.NotificationsScreen
 import com.pmis.app.screens.ProjectManagementScreen
@@ -24,12 +30,13 @@ import com.pmis.app.screens.StudentsScreen
 import com.pmis.app.screens.WelcomeScreen
 
 @Composable
-fun PMISNavigation() {
+fun PMISNavigation(authManager: AuthenticationManager) {
     val navController = rememberNavController()
+    val isAuthenticated by authManager.isAuthenticated.collectAsState()
     
     NavHost(
         navController = navController,
-        startDestination = "welcome"
+        startDestination = if (isAuthenticated) "main" else "welcome"
     ) {
         composable("welcome") {
             WelcomeScreen(
@@ -37,14 +44,30 @@ fun PMISNavigation() {
             )
         }
         
-        composable("auth") {
-            AuthScreen(navController = navController)
+        composable("login") {
+            LoginScreen(
+                navController = navController,
+                authManager = authManager
+            )
         }
         
         composable("main") {
             MainScreen(
                 onNavigateToScreen = { route ->
-                    navController.navigate(route)
+                    val mapped = when (route) {
+                        "intern" -> "intern_registration"
+                        else -> route
+                    }
+                    navController.navigate(mapped)
+                },
+                onLogout = {
+                    // Clear auth and go to welcome
+                    CoroutineScope(Dispatchers.Main).launch {
+                        authManager.signOut()
+                    }
+                    navController.navigate("welcome") {
+                        popUpTo("main") { inclusive = true }
+                    }
                 }
             )
         }
@@ -53,7 +76,11 @@ fun PMISNavigation() {
         composable("home") {
             HomeScreen(
                 onNavigateToScreen = { route ->
-                    navController.navigate(route)
+                    val mapped = when (route) {
+                        "intern" -> "intern_registration"
+                        else -> route
+                    }
+                    navController.navigate(mapped)
                 }
             )
         }
@@ -61,13 +88,20 @@ fun PMISNavigation() {
         composable("dashboard") {
             DashboardScreen(
                 onNavigateToScreen = { route ->
-                    navController.navigate(route)
+                    val mapped = when (route) {
+                        "intern" -> "intern_registration"
+                        else -> route
+                    }
+                    navController.navigate(mapped)
                 }
             )
         }
         
-        composable("intern") {
-            InternRegistrationScreen(navController = navController)
+        composable("intern_registration") {
+            InternRegistrationScreen(
+                navController = navController,
+                authManager = authManager
+            )
         }
         
         composable("recommendation") {
