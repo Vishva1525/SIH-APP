@@ -1,48 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="120dp"
-    android:height="32dp"
-    android:viewportWidth="120"
-    android:viewportHeight="32">
+    android:width="140dp"
+    android:height="40dp"
+    android:viewportWidth="140"
+    android:viewportHeight="40">
     
-    <!-- PMIS Logo - Simple text representation -->
+    <!-- PMIS Logo - Based on real design with tie graphic -->
+    
+    <!-- Orange tie graphic (forms the 'I' in Internship) -->
     <path
         android:fillColor="#FF6F00"
-        android:pathData="M8,4 L8,28 L12,28 L12,16 L20,16 L20,28 L24,28 L24,4 L20,4 L20,12 L12,12 L12,4 Z" />
+        android:pathData="M8,8 L8,32 L12,32 L12,20 L16,20 L16,32 L20,32 L20,8 L16,8 L16,16 L12,16 L12,8 Z" />
+    
+    <!-- Blue dot at top of tie (dot of 'i') -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M14,4 C15.1,4 16,4.9 16,6 C16,7.1 15.1,8 14,8 C12.9,8 12,7.1 12,6 C12,4.9 12.9,4 14,4 Z" />
+    
+    <!-- PM text (smaller, above Internship) -->
+    <path
+        android:fillColor="#333333"
+        android:pathData="M24,4 L24,12 L28,12 L28,8 L32,8 L32,12 L36,12 L36,4 L32,4 L32,6 L28,6 L28,4 Z" />
     
     <path
-        android:fillColor="#FF6F00"
-        android:pathData="M28,4 L28,28 L32,28 L32,4 Z" />
+        android:fillColor="#333333"
+        android:pathData="M40,4 L40,12 L44,12 L44,4 Z" />
+    
+    <!-- Internship text (larger, with tie as 'I') -->
+    <path
+        android:fillColor="#333333"
+        android:pathData="M52,12 L52,28 L56,28 L56,12 Z" />
     
     <path
-        android:fillColor="#FF6F00"
-        android:pathData="M36,4 L36,28 L40,28 L40,4 Z" />
+        android:fillColor="#333333"
+        android:pathData="M60,12 L60,28 L64,28 L64,12 Z" />
     
     <path
-        android:fillColor="#FF6F00"
-        android:pathData="M44,4 L44,28 L48,28 L48,4 Z" />
-    
-    <!-- S -->
-    <path
-        android:fillColor="#FF6F00"
-        android:pathData="M52,4 L56,4 C58.2,4 60,5.8 60,8 L60,12 C60,14.2 58.2,16 56,16 L52,16 L52,20 L56,20 C58.2,20 60,21.8 60,24 L60,28 C60,30.2 58.2,32 56,32 L52,32 Z" />
-    
-    <!-- C -->
-    <path
-        android:fillColor="#FF6F00"
-        android:pathData="M68,4 L72,4 C74.2,4 76,5.8 76,8 L76,28 C76,30.2 74.2,32 72,32 L68,32 Z" />
-    
-    <!-- H -->
-    <path
-        android:fillColor="#FF6F00"
-        android:pathData="M84,4 L84,28 L88,28 L88,16 L96,16 L96,28 L100,28 L100,4 L96,4 L96,12 L88,12 L88,4 Z" />
-    
-    <!-- E -->
-    <path
-        android:fillColor="#FF6F00"
-        android:pathData="M108,4 L108,28 L112,28 L112,4 Z" />
+        android:fillColor="#333333"
+        android:pathData="M68,12 L68,28 L72,28 L72,12 Z" />
     
     <path
-        android:fillColor="#FF6F00"
-        android:pathData="M108,4 L120,4 L120,8 L112,8 L112,12 L120,12 L120,16 L112,16 L112,20 L120,20 L120,24 L112,24 L112,28 L120,28 L120,32 L108,32 Z" />
+        android:fillColor="#333333"
+        android:pathData="M76,12 L76,28 L80,28 L80,12 Z" />
+    
+    <path
+        android:fillColor="#333333"
+        android:pathData="M84,12 L84,28 L88,28 L88,12 Z" />
+    
+    <path
+        android:fillColor="#333333"
+        android:pathData="M92,12 L92,28 L96,28 L96,12 Z" />
+    
+    <path
+        android:fillColor="#333333"
+        android:pathData="M100,12 L100,28 L104,28 L104,12 Z" />
+    
+    <path
+        android:fillColor="#333333"
+        android:pathData="M108,12 L108,28 L112,28 L112,12 Z" />
+    
+    <!-- LEARN FROM THE BEST tagline -->
+    <path
+        android:fillColor="#333333"
+        android:pathData="M24,32 L24,36 L28,36 L28,32 Z" />
+    
+    <path
+        android:fillColor="#333333"
+        android:pathData="M32,32 L32,36 L36,36 L36,32 Z" />
+    
+    <path
+        android:fillColor="#333333"
+        android:pathData="M40,32 L40,36 L44,36 L44,32 Z" />
+    
+    <path
+        android:fillColor="#333333"
+        android:pathData="M48,32 L48,36 L52,36 L52,32 Z" />
+    
+    <path
+        android:fillColor="#333333"
+        android:pathData="M56,32 L56,36 L60,36 L60,32 Z" />
+    
+    <!-- Underline for tagline -->
+    <path
+        android:fillColor="#333333"
+        android:pathData="M24,38 L60,38 L60,39 L24,39 Z" />
 </vector>

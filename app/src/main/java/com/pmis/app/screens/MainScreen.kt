@@ -152,7 +152,45 @@ fun MainScreen(
                             modifier = Modifier.padding(start = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Menu button
+                            // PMIS Logo
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_pmis_logo),
+                                contentDescription = "PMIS logo",
+                                modifier = Modifier.size(width = 100.dp, height = 28.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                            
+                            Spacer(modifier = Modifier.width(12.dp))
+                            
+                            // MCA Logo
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_mca_logo),
+                                contentDescription = "MCA logo",
+                                modifier = Modifier.size(width = 80.dp, height = 24.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                    },
+                    actions = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Dashboard Logo
+                            IconButton(
+                                onClick = {
+                                    selectedItem = "dashboard"
+                                    onNavigateToScreen("dashboard")
+                                }
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_dashboard_logo),
+                                    contentDescription = "Dashboard logo",
+                                    modifier = Modifier.size(28.dp),
+                                    contentScale = ContentScale.Fit
+                                )
+                            }
+                            
+                            // Hamburger Menu Button
                             IconButton(
                                 onClick = {
                                     scope.launch {
@@ -166,45 +204,9 @@ fun MainScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Menu,
-                                    contentDescription = "Menu"
+                                    contentDescription = "Open navigation menu"
                                 )
                             }
-                            
-                            Spacer(modifier = Modifier.width(8.dp))
-                            
-                            // PMIS Logo
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_pmis_logo),
-                                contentDescription = "PMIS logo",
-                                modifier = Modifier.size(width = 80.dp, height = 24.dp),
-                                contentScale = ContentScale.Fit
-                            )
-                            
-                            Spacer(modifier = Modifier.width(8.dp))
-                            
-                            // MCA Logo
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_mca_logo),
-                                contentDescription = "MCA logo",
-                                modifier = Modifier.size(width = 60.dp, height = 20.dp),
-                                contentScale = ContentScale.Fit
-                            )
-                        }
-                    },
-                    actions = {
-                        // Dashboard Logo
-                        IconButton(
-                            onClick = {
-                                selectedItem = "dashboard"
-                                onNavigateToScreen("dashboard")
-                            }
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_dashboard_logo),
-                                contentDescription = "Dashboard logo",
-                                modifier = Modifier.size(28.dp),
-                                contentScale = ContentScale.Fit
-                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
