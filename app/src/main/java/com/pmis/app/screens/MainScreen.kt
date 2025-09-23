@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -51,11 +52,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.pmis.app.ui.theme.PMISAppTheme
 import com.pmis.app.ui.theme.PurpleStart
 import com.pmis.app.ui.theme.WhiteColor
 import com.pmis.app.ui.theme.PMISNavbarBlue
 import com.pmis.app.ui.components.HeroSection
+import com.pmis.app.components.ElevenLabsWidgetOverlay
 import com.pmis.app.data.AppState
 import kotlinx.coroutines.launch
 
@@ -147,72 +150,51 @@ fun MainScreen(
             topBar = {
                 TopAppBar(
                     title = {
-                        // Empty title - logos will be in navigationIcon and actions
+                        Text(
+                            text = "PM INTERNSHIP SCHEME",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif // Using SansSerif for Poppins-like appearance
+                        )
                     },
                     navigationIcon = {
-                        Row(
-                            modifier = Modifier.padding(start = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        // Hamburger Menu Button
+                        IconButton(
+                            onClick = {
+                                scope.launch {
+                                    if (drawerState.isClosed) {
+                                        drawerState.open()
+                                    } else {
+                                        drawerState.close()
+                                    }
+                                }
+                            }
                         ) {
-                            // PMIS Logo
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_pmis_logo),
-                                contentDescription = "PMIS logo",
-                                modifier = Modifier.size(width = 100.dp, height = 28.dp),
-                                contentScale = ContentScale.Fit
-                            )
-                            
-                            Spacer(modifier = Modifier.width(12.dp))
-                            
-                            // MCA Logo
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_mca_logo),
-                                contentDescription = "MCA logo",
-                                modifier = Modifier.size(width = 80.dp, height = 24.dp),
-                                contentScale = ContentScale.Fit
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Open navigation menu",
+                                tint = Color.White
                             )
                         }
                     },
                     actions = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
+                        // Dashboard Icon
+                        IconButton(
+                            onClick = {
+                                selectedItem = "dashboard"
+                                onNavigateToScreen("dashboard")
+                            }
                         ) {
-                            // Dashboard Logo
-                            IconButton(
-                                onClick = {
-                                    selectedItem = "dashboard"
-                                    onNavigateToScreen("dashboard")
-                                }
-                            ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_dashboard_logo),
-                                    contentDescription = "Dashboard logo",
-                                    modifier = Modifier.size(28.dp),
-                                    contentScale = ContentScale.Fit
-                                )
-                            }
-                            
-                            // Hamburger Menu Button
-                            IconButton(
-                                onClick = {
-                                    scope.launch {
-                                        if (drawerState.isClosed) {
-                                            drawerState.open()
-                                        } else {
-                                            drawerState.close()
-                                        }
-                                    }
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Menu,
-                                    contentDescription = "Open navigation menu"
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Default.Dashboard,
+                                contentDescription = "Dashboard",
+                                tint = Color.White
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = PMISNavbarBlue, // Deep navy blue that complements orange
+                        containerColor = Color.Black, // Black color to match hero section
                         titleContentColor = WhiteColor,
                         navigationIconContentColor = WhiteColor,
                         actionIconContentColor = WhiteColor
@@ -253,6 +235,9 @@ fun MainScreen(
                     "notifications" -> NotificationsScreen()
                     else -> HeroSection()
                 }
+                
+                // ElevenLabs ConvAI Widget - appears on all screens
+                ElevenLabsWidgetOverlay()
             }
         }
     }

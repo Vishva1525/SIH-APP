@@ -192,7 +192,27 @@ data class InternshipRecommendation(
     val isUrgent: Boolean = false,
     val applicationDeadline: Date? = null,
     val companyLogo: String? = null,
+    // Additional properties for popup
+    val internship_id: String = id,
+    val organization_name: String = company,
+    val domain: String = type,
+    val stipend: Int = salary?.replace(Regex("[^0-9]"), "")?.toIntOrNull() ?: 0,
+    val success_prob: Float = matchScore / 100f,
+    val missing_skills: List<String> = emptyList(),
+    val course_suggestions: List<CourseSuggestion> = emptyList(),
+    val reasons: List<String> = emptyList(),
+    val application_deadline: String = applicationDeadline?.toString() ?: "",
+    val rank: Int = 1,
+    val company_logo_url: String? = companyLogo,
     val contactEmail: String? = null
+)
+
+data class CourseSuggestion(
+    val name: String,
+    val platform: String,
+    val duration_estimate: String,
+    val description: String,
+    val enrollment_url: String
 )
 
 data class Application(
