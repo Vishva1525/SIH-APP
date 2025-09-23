@@ -20,3 +20,4 @@ val PMISPrimary = Color(0xFF1976D2)
 val PMISSecondary = Color(0xFF4CAF50)
 val PMISBackground = Color(0xFFFAFAFA)
 val PMISOnBackground = Color(0xFF212121)
+val PMISNavbarBlue = Color(0xFF1A237E) // Deep navy blue for navbar that complements orange

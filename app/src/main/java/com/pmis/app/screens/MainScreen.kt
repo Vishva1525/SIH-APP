@@ -14,6 +14,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import com.pmis.app.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -53,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import com.pmis.app.ui.theme.PMISAppTheme
 import com.pmis.app.ui.theme.PurpleStart
 import com.pmis.app.ui.theme.WhiteColor
+import com.pmis.app.ui.theme.PMISNavbarBlue
 import com.pmis.app.ui.components.HeroSection
 import com.pmis.app.data.AppState
 import kotlinx.coroutines.launch
@@ -210,7 +212,7 @@ fun MainScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = PurpleStart.copy(alpha = 0.9f),
+                        containerColor = PMISNavbarBlue, // Deep navy blue that complements orange
                         titleContentColor = WhiteColor,
                         navigationIconContentColor = WhiteColor,
                         actionIconContentColor = WhiteColor
